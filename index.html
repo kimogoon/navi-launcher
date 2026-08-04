@@ -66,25 +66,9 @@
     btns.appendChild(a);
   }
   if (isFinite(la) && isFinite(lo)) {
-    // 카카오내비: 공식 JS SDK(Kakao.Navi.start) 우선, SDK 로드 실패 시 키 포함 스킴 폴백
-    const KAKAO_JS_KEY = '27865b4041f8637944c71961479ff2cc';
-    const kbtn = document.createElement('a');
-    kbtn.className = 'btn kakao';
-    kbtn.textContent = '카카오내비로 안내';
-    kbtn.href = '#';
-    kbtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (window.Kakao && Kakao.Navi) {
-        if (!Kakao.isInitialized()) Kakao.init(KAKAO_JS_KEY);
-        Kakao.Navi.start({ name: name, x: lo, y: la, coordType: 'wgs84' });
-      } else {
-        const p = encodeURIComponent(JSON.stringify(
-          {destination: {name: name, x: lo, y: la}, option: {coord_type: 'wgs84'}}));
-        location.href = `kakaonavi-sdk://navigate?appkey=${KAKAO_JS_KEY}&apiver=1.0&param=${p}`;
-      }
-    });
-    btns.appendChild(kbtn);
-    btn('web', '카카오맵 길안내(차량)', `kakaomap://route?ep=${la},${lo}&by=CAR`);
+    // 카카오: 카카오맵 길안내(무료, 확실) 우선. 카카오내비 직접 실행은
+    // 카카오 유료 API 활성화+비즈월렛 필요라 보류(2026-08-04 확인).
+    btn('kakao', '카카오맵 길안내(차량)', `kakaomap://route?ep=${la},${lo}&by=CAR`);
     btn('tmap', 'T맵으로 안내', `tmap://route?rGoName=${enc}&rGoX=${lo}&rGoY=${la}`);
     btn('naver', '네이버지도로 안내', `nmap://route/car?dlat=${la}&dlng=${lo}&dname=${enc}&appname=com.studio209.inboxautopilot`);
     btn('web', '카카오맵에서 보기', `https://map.kakao.com/link/map/${enc},${la},${lo}`);
