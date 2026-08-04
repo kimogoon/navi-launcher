@@ -65,7 +65,13 @@
     btns.appendChild(a);
   }
   if (isFinite(la) && isFinite(lo)) {
-    btn('kakao', '카카오내비로 안내', `kakaonavi://navigate?name=${enc}&x=${lo}&y=${la}&coord_type=wgs84`);
+    // 카카오내비 현행 형식: kakaonavi-sdk:// + appkey + JSON param (구 kakaonavi://navigate는 앱이 거부)
+    const naviParam = encodeURIComponent(JSON.stringify(
+      {destination: {name: name, x: lo, y: la}, option: {coord_type: 'wgs84'}}));
+    const naviExtras = encodeURIComponent(JSON.stringify(
+      {KA: 'sdk/1.25.2 os/javascript lang/ko-KR device/iPhone origin/https%3A%2F%2Fkimogoon.github.io'}));
+    btn('kakao', '카카오내비로 안내',
+      `kakaonavi-sdk://navigate?appkey=3e786f8df14fcfc89d159421a6a7c9b6&apiver=1.0&extras=${naviExtras}&param=${naviParam}`);
     btn('tmap', 'T맵으로 안내', `tmap://route?rGoName=${enc}&rGoX=${lo}&rGoY=${la}`);
     btn('naver', '네이버지도로 안내', `nmap://route/car?dlat=${la}&dlng=${lo}&dname=${enc}&appname=com.studio209.inboxautopilot`);
     btn('web', '카카오맵에서 보기', `https://map.kakao.com/link/map/${enc},${la},${lo}`);
