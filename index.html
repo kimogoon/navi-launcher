@@ -31,6 +31,7 @@
   .tmap  { background: #0264FB; color: #fff; border-color: #0257D8; }
   .naver { background: #03C75A; color: #fff; border-color: #02AD4E; }
   .web   { background: var(--card); color: var(--text); }
+  .google{ background: #4285F4; color: #fff; border-color: #3367D6; }
   .note { font-size: 13px; color: var(--muted); line-height: 1.6; margin-top: 22px;
     border-top: 1px solid var(--line); padding-top: 14px; }
   .missing { background: var(--card); border: 1px solid var(--line); border-radius: 12px;
@@ -84,6 +85,7 @@
     btns.appendChild(knbtn);
     btn('kakao', '카카오맵 길안내(차량)', `kakaomap://route?ep=${la},${lo}&by=CAR`);
     btn('web', 'Apple 지도에서 보기', `https://maps.apple.com/?q=${enc}&ll=${la},${lo}`);
+    btn('google', '구글지도로 안내', `https://www.google.com/maps/dir/?api=1&destination=${la},${lo}&travelmode=driving`);
     document.getElementById('resolved').textContent = `좌표 ${la.toFixed(5)}, ${lo.toFixed(5)}`;
   } else {
     const d = document.createElement('div');
@@ -94,6 +96,7 @@
     btn('naver', '네이버지도에서 검색', `https://map.naver.com/p/search/${enc}`);
     btn('kakao', '카카오맵에서 검색', `https://map.kakao.com/link/search/${enc}`);
     btn('web', 'Apple 지도에서 검색', `https://maps.apple.com/?q=${enc}`);
+    btn('google', '구글지도에서 검색', `https://www.google.com/maps/search/?api=1&query=${enc}`);
   }
 </script>
 
