@@ -68,8 +68,20 @@
     // 순서 고정(2026-08-04 사용자 지정): T맵 > 네이버 > 카카오내비 실행 > 카카오맵 길안내 > Apple 지도
     btn('tmap', 'T맵으로 안내', `tmap://route?rGoName=${enc}&rGoX=${lo}&rGoY=${la}`);
     btn('naver', '네이버지도로 안내', `nmap://route/car?dlat=${la}&dlng=${lo}&dname=${enc}&appname=com.studio209.inboxautopilot`);
-    // 카카오내비 직접 '안내'는 유료 API 활성화가 필요해 보류 — 앱 실행만 제공
-    btn('kakao', '카카오내비 실행', 'kakaonavi-sdk://');
+    // 카카오내비 직접 '안내'는 유료 API 활성화가 필요해 보류 — 장소명 복사 후 앱 실행
+    const knbtn = document.createElement('a');
+    knbtn.className = 'btn kakao';
+    knbtn.href = '#';
+    knbtn.textContent = '카카오내비 실행 (장소명 복사)';
+    knbtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      try {
+        await navigator.clipboard.writeText(name);
+        knbtn.textContent = '복사됨! 검색창에 붙여넣기 하세요';
+      } catch (_) { /* 클립보드 거부돼도 실행은 진행 */ }
+      setTimeout(() => { location.href = 'kakaonavi-sdk://'; }, 250);
+    });
+    btns.appendChild(knbtn);
     btn('kakao', '카카오맵 길안내(차량)', `kakaomap://route?ep=${la},${lo}&by=CAR`);
     btn('web', 'Apple 지도에서 보기', `https://maps.apple.com/?q=${enc}&ll=${la},${lo}`);
     document.getElementById('resolved').textContent = `좌표 ${la.toFixed(5)}, ${lo.toFixed(5)}`;
