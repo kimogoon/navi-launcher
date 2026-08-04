@@ -36,7 +36,6 @@
   .missing { background: var(--card); border: 1px solid var(--line); border-radius: 12px;
     padding: 16px; font-size: 14px; line-height: 1.6; margin-top: 18px; }
 </style>
-<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.5/kakao.min.js"></script>
 </head>
 <body>
 
@@ -66,21 +65,23 @@
     btns.appendChild(a);
   }
   if (isFinite(la) && isFinite(lo)) {
-    // 카카오: 카카오맵 길안내(무료, 확실) 우선. 카카오내비 직접 실행은
-    // 카카오 유료 API 활성화+비즈월렛 필요라 보류(2026-08-04 확인).
-    btn('kakao', '카카오맵 길안내(차량)', `kakaomap://route?ep=${la},${lo}&by=CAR`);
+    // 순서 고정(2026-08-04 사용자 지정): T맵 > 네이버 > 카카오내비 실행 > 카카오맵 길안내 > Apple 지도
     btn('tmap', 'T맵으로 안내', `tmap://route?rGoName=${enc}&rGoX=${lo}&rGoY=${la}`);
     btn('naver', '네이버지도로 안내', `nmap://route/car?dlat=${la}&dlng=${lo}&dname=${enc}&appname=com.studio209.inboxautopilot`);
-    btn('web', '카카오맵에서 보기', `https://map.kakao.com/link/map/${enc},${la},${lo}`);
+    // 카카오내비 직접 '안내'는 유료 API 활성화가 필요해 보류 — 앱 실행만 제공
+    btn('kakao', '카카오내비 실행', 'kakaonavi-sdk://');
+    btn('kakao', '카카오맵 길안내(차량)', `kakaomap://route?ep=${la},${lo}&by=CAR`);
+    btn('web', 'Apple 지도에서 보기', `https://maps.apple.com/?q=${enc}&ll=${la},${lo}`);
     document.getElementById('resolved').textContent = `좌표 ${la.toFixed(5)}, ${lo.toFixed(5)}`;
   } else {
     const d = document.createElement('div');
     d.className = 'missing';
     d.textContent = '이 장소는 좌표를 찾지 못해 검색으로 엽니다. 지도에서 장소를 연 뒤 내비 버튼을 누르세요.';
     document.querySelector('.wrap').insertBefore(d, btns);
-    btn('kakao', '카카오맵에서 검색', `https://map.kakao.com/link/search/${enc}`);
-    btn('naver', '네이버지도에서 검색', `https://map.naver.com/p/search/${enc}`);
     btn('tmap', 'T맵에서 검색', `tmap://search?name=${enc}`);
+    btn('naver', '네이버지도에서 검색', `https://map.naver.com/p/search/${enc}`);
+    btn('kakao', '카카오맵에서 검색', `https://map.kakao.com/link/search/${enc}`);
+    btn('web', 'Apple 지도에서 검색', `https://maps.apple.com/?q=${enc}`);
   }
 </script>
 
