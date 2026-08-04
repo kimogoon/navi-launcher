@@ -79,7 +79,7 @@
         await navigator.clipboard.writeText(name);
         knbtn.textContent = '복사됨! 검색창에 붙여넣기 하세요';
       } catch (_) { /* 클립보드 거부돼도 실행은 진행 */ }
-      setTimeout(() => { location.href = 'kakaonavi-sdk://'; }, 250);
+      setTimeout(() => { location.href = 'kakaonavi://'; }, 250);
     });
     btns.appendChild(knbtn);
     btn('kakao', '카카오맵 길안내(차량)', `kakaomap://route?ep=${la},${lo}&by=CAR`);
