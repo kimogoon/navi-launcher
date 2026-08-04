@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>길안내</title>
+<style>
+  :root {
+    --bg: #F6F7F9; --card: #FFFFFF; --text: #1A1D21; --muted: #6B7280;
+    --line: #E5E8EC; --accent: #2B6FF3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #16181C; --card: #1F2328; --text: #ECEEF0; --muted: #9AA3AD; --line: #2E343B; }
+  }
+  :root[data-theme="dark"] { --bg: #16181C; --card: #1F2328; --text: #ECEEF0; --muted: #9AA3AD; --line: #2E343B; }
+  :root[data-theme="light"] { --bg: #F6F7F9; --card: #FFFFFF; --text: #1A1D21; --muted: #6B7280; --line: #E5E8EC; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font-family: "Apple SD Gothic Neo", Pretendard, -apple-system, sans-serif; }
+  .wrap { max-width: 420px; margin: 0 auto; padding: 28px 20px 40px; }
+  .eyebrow { font-size: 12px; letter-spacing: .12em; color: var(--muted); text-transform: uppercase; }
+  h1 { font-size: 24px; line-height: 1.3; margin: 6px 0 2px; text-wrap: balance; }
+  .when { font-size: 15px; color: var(--muted); margin-bottom: 20px; }
+  .resolved { font-size: 13px; color: var(--muted); margin: 14px 0 0;
+    font-variant-numeric: tabular-nums; }
+  .btns { display: flex; flex-direction: column; gap: 12px; margin-top: 18px; }
+  a.btn { display: flex; align-items: center; justify-content: center; gap: 8px;
+    height: 56px; border-radius: 12px; font-size: 17px; font-weight: 700;
+    text-decoration: none; border: 1px solid var(--line); }
+  a.btn:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .kakao { background: #FAE100; color: #191600; border-color: #E8D100; }
+  .tmap  { background: #0264FB; color: #fff; border-color: #0257D8; }
+  .naver { background: #03C75A; color: #fff; border-color: #02AD4E; }
+  .web   { background: var(--card); color: var(--text); }
+  .note { font-size: 13px; color: var(--muted); line-height: 1.6; margin-top: 22px;
+    border-top: 1px solid var(--line); padding-top: 14px; }
+  .missing { background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 16px; font-size: 14px; line-height: 1.6; margin-top: 18px; }
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <div class="eyebrow">약속 장소 길안내</div>
+  <h1 id="place">장소</h1>
+  <div class="when" id="when"></div>
+  <div class="btns" id="btns"></div>
+  <p class="resolved" id="resolved"></p>
+  <p class="note">버튼을 누르면 해당 내비 앱이 목적지가 설정된 상태로 실행됩니다.
+    앱이 없으면 반응이 없을 수 있어요 — 아래 지도 링크를 이용하세요.</p>
+</div>
+<script>
+  const p = new URLSearchParams(location.hash.slice(1));
+  const name = p.get('n') || '약속 장소';
+  const la = parseFloat(p.get('la')), lo = parseFloat(p.get('lo'));
+  const when = p.get('w') || '';
+  document.getElementById('place').textContent = name;
+  document.getElementById('when').textContent = when;
+  document.title = '길안내 · ' + name;
+  const enc = encodeURIComponent(name);
+  const btns = document.getElementById('btns');
+  function btn(cls, label, href) {
+    const a = document.createElement('a');
+    a.className = 'btn ' + cls; a.textContent = label; a.href = href;
+    btns.appendChild(a);
+  }
+  if (isFinite(la) && isFinite(lo)) {
+    btn('kakao', '카카오내비로 안내', `kakaonavi://navigate?name=${enc}&x=${lo}&y=${la}&coord_type=wgs84`);
+    btn('tmap', 'T맵으로 안내', `tmap://route?rGoName=${enc}&rGoX=${lo}&rGoY=${la}`);
+    btn('naver', '네이버지도로 안내', `nmap://route/car?dlat=${la}&dlng=${lo}&dname=${enc}&appname=com.studio209.inboxautopilot`);
+    btn('web', '카카오맵에서 보기', `https://map.kakao.com/link/map/${enc},${la},${lo}`);
+    document.getElementById('resolved').textContent = `좌표 ${la.toFixed(5)}, ${lo.toFixed(5)}`;
+  } else {
+    const d = document.createElement('div');
+    d.className = 'missing';
+    d.textContent = '이 장소는 좌표를 찾지 못해 검색으로 엽니다. 지도에서 장소를 연 뒤 내비 버튼을 누르세요.';
+    document.querySelector('.wrap').insertBefore(d, btns);
+    btn('kakao', '카카오맵에서 검색', `https://map.kakao.com/link/search/${enc}`);
+    btn('naver', '네이버지도에서 검색', `https://map.naver.com/p/search/${enc}`);
+    btn('tmap', 'T맵에서 검색', `tmap://search?name=${enc}`);
+  }
+</script>
+
+</body>
+</html>
