@@ -54,10 +54,25 @@
 </div>
 <script>
   const p = new URLSearchParams(location.hash.slice(1));
-  const name = p.get('n') || '약속 장소';
-  const la = parseFloat(p.get('la')), lo = parseFloat(p.get('lo'));
-  const when = p.get('w') || '';
-  const addr = p.get('a') || '';
+  // d= : 한글 퍼센트 인코딩(글자당 9자)이 링크를 부풀려 base64url 로 압축한 형식.
+  //      payload = 명칭 \x1f 위도 \x1f 경도 \x1f 일시 \x1f 주소
+  //      예전 n/la/lo/w/a 링크도 계속 열리도록 폴백을 남겨 둔다.
+  let name, la, lo, when, addr;
+  const d = p.get('d');
+  if (d) {
+    const b = d.replace(/-/g, '+').replace(/_/g, '/');
+    const bin = atob(b + '='.repeat((4 - b.length % 4) % 4));
+    const parts = new TextDecoder().decode(
+      Uint8Array.from(bin, c => c.charCodeAt(0))).split('\u001f');
+    name = parts[0] || '약속 장소';
+    la = parseFloat(parts[1]); lo = parseFloat(parts[2]);
+    when = parts[3] || ''; addr = parts[4] || '';
+  } else {
+    name = p.get('n') || '약속 장소';
+    la = parseFloat(p.get('la')); lo = parseFloat(p.get('lo'));
+    when = p.get('w') || '';
+    addr = p.get('a') || '';
+  }
   document.getElementById('place').textContent = name;
   document.getElementById('when').textContent = when;
   document.title = '길안내 · ' + name;
