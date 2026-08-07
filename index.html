@@ -74,7 +74,10 @@
     addr = p.get('a') || '';
   }
   document.getElementById('place').textContent = name;
-  document.getElementById('when').textContent = when;
+  // 일시는 링크에서 뺐다(길이 단축) — 비어 있으면 빈 줄이 남지 않게 숨긴다
+  const whenEl = document.getElementById('when');
+  whenEl.textContent = when;
+  if (!when) whenEl.style.display = 'none';
   document.title = '길안내 · ' + name;
   const enc = encodeURIComponent(name);
   const btns = document.getElementById('btns');
