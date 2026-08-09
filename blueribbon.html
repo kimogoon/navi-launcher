@@ -85,6 +85,23 @@
   .empty { font-size: 14px; color: var(--muted); text-align: center; padding: 40px 10px; }
   .note { font-size: 12.5px; color: var(--muted); line-height: 1.6; margin-top: 24px;
     border-top: 1px solid var(--line); padding-top: 14px; }
+
+  .search-wrap { position: relative; margin-bottom: 14px; }
+  .search-input { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line);
+    background: var(--card); color: var(--text); font: inherit; font-size: 15px; }
+  .search-input::placeholder { color: var(--muted); }
+
+  .card-photo { display: block; width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 10px;
+    margin-top: 10px; background: var(--bg); }
+  .card-desc { font-size: 13.5px; line-height: 1.55; margin: 10px 0 0; color: var(--text); }
+  .menu-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .menu-tag { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 20px;
+    background: var(--bg); border: 1px solid var(--line); color: var(--text); }
+  .review-box { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: var(--bg);
+    border: 1px solid var(--line); }
+  .review-box p { margin: 0; font-size: 13px; font-style: italic; color: var(--text); line-height: 1.5; }
+  .review-src { display: inline-block; margin-top: 6px; font-size: 11.5px; color: var(--accent); text-decoration: none; }
+  .content-pending { font-size: 12px; color: var(--muted); margin-top: 10px; }
 </style>
 </head>
 <body>
@@ -92,11 +109,14 @@
   <div class="eyebrow">블루리본서베이 2026 · 251/252곳 위치 확인</div>
   <h1>블루리본 맛집 런처</h1>
 
+  <div class="search-wrap">
+    <input id="searchInput" class="search-input" type="search" placeholder="식당 이름으로 바로 검색" autocomplete="off">
+  </div>
   <div id="crumbs" class="crumbs"></div>
   <div id="ribbonSeg" class="ribbon-seg"></div>
   <div id="screen"></div>
 
-  <p class="note">거리순 정렬을 쓰려면 위치 접근을 허용해주세요. 카드를 누르면 T맵·네이버지도·카카오맵·Apple지도·구글지도로 바로 안내를 시작할 수 있는 버튼이 나옵니다. 앱이 설치되어 있지 않으면 반응이 없을 수 있어요.</p>
+  <p class="note">거리순 정렬을 쓰려면 위치 접근을 허용해주세요. 카드를 누르면 사진·소개·추천메뉴·리뷰(준비되는 대로)와 함께 T맵·네이버지도·카카오맵·Apple지도·구글지도로 바로 안내를 시작할 수 있는 버튼이 나옵니다. 앱이 설치되어 있지 않으면 반응이 없을 수 있어요.</p>
 </div>
 
 <script>
@@ -105,8 +125,9 @@ const CATS = ["한식","중식","일식","양식","디저트","카페","기타"]
 const CAT_COLOR = {"한식":"var(--c-han)","중식":"var(--c-jung)","일식":"var(--c-il)","양식":"var(--c-yang)","디저트":"var(--c-dessert)","카페":"var(--c-cafe)","기타":"var(--c-etc)"};
 const REGIONS = [...new Set(DATA.map(d => d.sido))];
 
-const state = { ribbon: "all", cat: null, region: null, sort: null, radius: null };
+const state = { ribbon: "all", cat: null, region: null, sort: "rating", radius: null };
 let userLoc = null;
+let searchQuery = "";
 
 function haversine(lat1, lon1, lat2, lon2) {
   const R = 6371;
@@ -159,17 +180,31 @@ function renderCrumbs() {
   const el = document.getElementById("crumbs");
   const items = [];
   items.push(`<span class="crumb reset" id="crumbReset">처음부터</span>`);
-  if (state.cat) items.push(`<span class="crumb clickable active" data-to="cat">${state.cat === "__ALL__" ? "전체" : state.cat}</span>`);
-  if (state.cat && state.region) items.push(`<span class="crumb clickable active" data-to="region">${state.region === "__ALL__" ? "전체 지역" : state.region}</span>`);
+  if (searchQuery.trim()) {
+    items.push(`<span class="crumb active">검색: ${searchQuery.trim()}</span>`);
+  } else {
+    if (state.cat) items.push(`<span class="crumb clickable active" data-to="cat">${state.cat === "__ALL__" ? "전체" : state.cat}</span>`);
+    if (state.cat && state.region) items.push(`<span class="crumb clickable active" data-to="region">${state.region === "__ALL__" ? "전체 지역" : state.region}</span>`);
+  }
   el.innerHTML = items.join("");
   const reset = document.getElementById("crumbReset");
-  if (reset) reset.addEventListener("click", () => { state.cat = null; state.region = null; render(); });
+  if (reset) reset.addEventListener("click", () => {
+    state.cat = null; state.region = null;
+    searchQuery = ""; const si = document.getElementById("searchInput"); if (si) si.value = "";
+    render();
+  });
   el.querySelectorAll(".crumb.clickable").forEach(c => c.addEventListener("click", () => {
     const to = c.getAttribute("data-to");
     if (to === "cat") { state.cat = null; state.region = null; }
     if (to === "region") { state.region = null; }
     render();
   }));
+}
+
+function currentList() {
+  const q = searchQuery.trim();
+  if (q) return byRibbon(DATA).filter(d => d.name.includes(q) || (d.note && d.note.includes(q)) || (d.group && d.group.includes(q)));
+  return byRegion(byCat(byRibbon(DATA)));
 }
 
 function screenCategory() {
@@ -203,7 +238,6 @@ function screenRegion() {
   document.querySelectorAll(".tile-btn[data-region]").forEach(b => b.addEventListener("click", () => {
     const v = b.getAttribute("data-region");
     state.region = v === "__ALL__" ? "__ALL__" : v;
-    if (!state.sort) state.sort = "name";
     render();
   }));
 }
@@ -227,13 +261,14 @@ function requestLocation() {
 }
 
 function screenResults() {
-  let list = byRegion(byCat(byRibbon(DATA)));
+  const isSearch = !!searchQuery.trim();
 
   let html = `<div class="controls">`;
   if (!userLoc) {
     html += `<button class="loc-btn" id="locBtn">내 위치로 거리순 정렬</button>`;
   }
   html += `<div class="sort-seg" id="sortSeg">
+      <button data-s="rating" ${state.sort==="rating"?"class=\"active\"":""}>등급순</button>
       <button data-s="distance" ${state.sort==="distance"?"class=\"active\"":""} ${!userLoc?"disabled":""}>거리순</button>
       <button data-s="name" ${state.sort==="name"?"class=\"active\"":""}>이름순</button>
     </div>`;
@@ -251,7 +286,8 @@ function screenResults() {
   html += `</div>`;
   if (!userLoc) html += `<p class="loc-status" id="locStatus"></p>`;
 
-  document.getElementById("screen").innerHTML = `<p class="section-title">3단계 · 결과</p>` + html + `<div id="resultsList"></div>`;
+  const title = isSearch ? `"${searchQuery.trim()}" 검색 결과` : "3단계 · 결과";
+  document.getElementById("screen").innerHTML = `<p class="section-title">${title}</p>` + html + `<div id="resultsList"></div>`;
 
   const locBtn = document.getElementById("locBtn");
   if (locBtn) locBtn.addEventListener("click", requestLocation);
@@ -270,7 +306,7 @@ function screenResults() {
 }
 
 function renderResultsList() {
-  let list = byRegion(byCat(byRibbon(DATA))).slice();
+  let list = currentList().slice();
 
   if (userLoc) {
     list.forEach(d => { d._dist = (d.lat != null) ? haversine(userLoc.lat, userLoc.lon, d.lat, d.lon) : Infinity; });
@@ -279,6 +315,8 @@ function renderResultsList() {
 
   if (state.sort === "distance" && userLoc) {
     list.sort((a, b) => a._dist - b._dist);
+  } else if (state.sort === "rating") {
+    list.sort((a, b) => b.ribbon - a.ribbon || a.name.localeCompare(b.name, "ko"));
   } else {
     list.sort((a, b) => a.name.localeCompare(b.name, "ko"));
   }
@@ -317,17 +355,42 @@ function renderResultsList() {
       card.classList.add("open");
       if (!panel.dataset.filled) {
         const item = list[Number(i)];
-        const btns = mapLinks(item).map(b => `<a class="btn ${b.cls}" href="${b.href}">${b.label}</a>`).join("");
-        panel.innerHTML = `<div class="btns">${btns}</div>`;
+        panel.innerHTML = buildPanel(item);
         panel.dataset.filled = "1";
       }
     }
   }));
 }
 
+function buildPanel(item) {
+  let html = "";
+  if (item.photo) html += `<img class="card-photo" src="${item.photo}" alt="${item.name}" loading="lazy">`;
+  if (item.desc) html += `<p class="card-desc">${item.desc}</p>`;
+  if (item.menu && item.menu.length) {
+    html += `<div class="menu-tags">${item.menu.map(m => `<span class="menu-tag">${m}</span>`).join("")}</div>`;
+  }
+  if (item.review) {
+    const rev = typeof item.review === "string" ? { summary: item.review } : item.review;
+    html += `<div class="review-box"><p>&ldquo;${rev.summary}&rdquo;</p>${rev.source ? `<a class="review-src" href="${rev.source}" target="_blank" rel="noopener">출처 보기</a>` : ""}</div>`;
+  }
+  if (!item.photo && !item.desc && !(item.menu && item.menu.length) && !item.review) {
+    html += `<p class="content-pending">사진·소개·추천메뉴·리뷰 정보는 준비 중입니다.</p>`;
+  }
+  const btns = mapLinks(item).map(b => `<a class="btn ${b.cls}" href="${b.href}">${b.label}</a>`).join("");
+  html += `<div class="btns">${btns}</div>`;
+  return html;
+}
+
+const searchInputEl = document.getElementById("searchInput");
+searchInputEl.addEventListener("input", () => {
+  searchQuery = searchInputEl.value;
+  render();
+});
+
 function render() {
   renderRibbonSeg();
   renderCrumbs();
+  if (searchQuery.trim()) { screenResults(); return; }
   if (!state.cat) { screenCategory(); return; }
   if (!state.region) { screenRegion(); return; }
   screenResults();
