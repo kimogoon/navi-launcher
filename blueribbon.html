@@ -56,6 +56,7 @@
   .sort-seg button { font: inherit; font-size: 12.5px; font-weight: 600; padding: 7px 12px; border-radius: 18px;
     border: 1px solid var(--line); background: var(--card); color: var(--muted); }
   .sort-seg button.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .sort-seg button:disabled { opacity: .4; }
   .loc-status { font-size: 12px; color: var(--muted); margin: -6px 0 16px; }
 
   .result-count { font-size: 12.5px; color: var(--muted); margin-bottom: 10px; }
@@ -252,9 +253,10 @@ function requestLocation() {
       render();
     },
     err => {
-      if (status) status.textContent = "위치를 가져오지 못했습니다 (" + err.message + "). 이름순으로 봅니다.";
       state.sort = "name";
-      renderResultsList();
+      render();
+      const status2 = document.getElementById("locStatus");
+      if (status2) status2.textContent = "위치를 가져오지 못했습니다 (" + err.message + "). 이름순으로 봅니다.";
     },
     { enableHighAccuracy: false, timeout: 8000 }
   );
@@ -269,7 +271,7 @@ function screenResults() {
   }
   html += `<div class="sort-seg" id="sortSeg">
       <button data-s="rating" ${state.sort==="rating"?"class=\"active\"":""}>등급순</button>
-      <button data-s="distance" ${state.sort==="distance"?"class=\"active\"":""} ${!userLoc?"disabled":""}>거리순</button>
+      <button data-s="distance" ${state.sort==="distance"?"class=\"active\"":""} ${!userLoc?"disabled title=\"먼저 '내 위치로 거리순 정렬'을 눌러주세요\"":""}>거리순</button>
       <button data-s="name" ${state.sort==="name"?"class=\"active\"":""}>이름순</button>
     </div>`;
   if (userLoc) {
@@ -294,6 +296,8 @@ function screenResults() {
   document.querySelectorAll("#sortSeg button").forEach(b => b.addEventListener("click", () => {
     if (b.disabled) return;
     state.sort = b.getAttribute("data-s");
+    document.querySelectorAll("#sortSeg button").forEach(x => x.classList.remove("active"));
+    b.classList.add("active");
     renderResultsList();
   }));
   const radiusSel = document.getElementById("radiusSel");
