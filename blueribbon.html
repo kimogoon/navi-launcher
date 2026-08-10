@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>블루리본 런처</title>
+<title>BLUE COURSE</title>
 <style>
   :root {
     --bg: #F6F7F9; --card: #FFFFFF; --text: #1A1D21; --muted: #6B7280;
@@ -96,6 +96,10 @@
   .card-photo { display: block; width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 10px;
     margin-top: 10px; background: var(--bg); }
   .card-desc { font-size: 18.5px; line-height: 1.55; margin: 10px 0 0; color: var(--text); }
+  .info-list { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: var(--bg);
+    border: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
+  .info-row { font-size: 16px; line-height: 1.5; color: var(--text); }
+  .info-row b { display: inline-block; min-width: 74px; color: var(--muted); font-weight: 600; }
   .menu-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
   .menu-tag { font-size: 16.5px; font-weight: 600; padding: 4px 10px; border-radius: 20px;
     background: var(--bg); border: 1px solid var(--line); color: var(--text); }
@@ -109,7 +113,7 @@
 <body>
 <div class="wrap">
   <div class="eyebrow">블루리본서베이 2026 · 250/252곳 위치 확인</div>
-  <h1>블루리본 맛집 런처</h1>
+  <h1>BLUE COURSE</h1>
 
   <div class="search-wrap">
     <input id="searchInput" class="search-input" type="search" placeholder="식당 이름으로 바로 검색" autocomplete="off">
@@ -387,6 +391,14 @@ function renderResultsList() {
 function buildPanel(item) {
   let html = "";
   if (item.photo) html += `<img class="card-photo" src="${item.photo}" alt="${item.name}" loading="lazy">`;
+  const info = [];
+  if (item.hours) info.push(["영업시간", item.hours]);
+  if (item.closed) info.push(["휴무일", item.closed]);
+  if (item.parking) info.push(["주차", item.parking]);
+  if (item.wait) info.push(["웨이팅", item.wait]);
+  if (info.length) {
+    html += `<div class="info-list">${info.map(([k,v]) => `<div class="info-row"><b>${k}</b>${v}</div>`).join("")}</div>`;
+  }
   if (item.desc) html += `<p class="card-desc">${item.desc}</p>`;
   if (item.menu && item.menu.length) {
     html += `<div class="menu-tags">${item.menu.map(m => `<span class="menu-tag">${m}</span>`).join("")}</div>`;
@@ -398,7 +410,7 @@ function buildPanel(item) {
   if (item.place_url) {
     html += `<a class="review-src" style="display:block;margin-top:${item.desc||item.photo?'2px':'10px'}" href="${item.place_url}" target="_blank" rel="noopener">카카오맵에서 사진·리뷰 더 보기 &rsaquo;</a>`;
   }
-  if (!item.photo && !item.desc && !(item.menu && item.menu.length) && !item.review) {
+  if (!item.photo && !item.desc && !(item.menu && item.menu.length) && !item.review && !info.length) {
     html += `<p class="content-pending">소개·추천메뉴·리뷰 요약은 준비 중입니다.</p>`;
   }
   const btns = mapLinks(item).map(b =>
