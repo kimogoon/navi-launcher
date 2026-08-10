@@ -74,9 +74,10 @@
   .card-panel { display: none; padding: 4px 14px 14px; border-top: 1px solid var(--line); }
   .card.open .card-panel { display: block; }
   .btns { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
-  a.btn { display: flex; align-items: center; justify-content: center; gap: 8px;
-    height: 56px; border-radius: 10px; font-size: 21px; font-weight: 700;
-    text-decoration: none; border: 1px solid var(--line); }
+  .btn { display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; height: 56px; border-radius: 10px; font: inherit; font-size: 21px; font-weight: 700;
+    text-decoration: none; border: 1px solid var(--line); cursor: pointer; -webkit-appearance: none; appearance: none; }
+  .kakao { background: #FEE500; color: #191600; border-color: #E6CE00; }
   .kakaomap { background: #E08A52; color: #1A1D21; border-color: #C97740; }
   .tmap  { background: #0264FB; color: #fff; border-color: #0257D8; }
   .naver { background: #03C75A; color: #fff; border-color: #02AD4E; }
@@ -117,7 +118,7 @@
   <div id="ribbonSeg" class="ribbon-seg"></div>
   <div id="screen"></div>
 
-  <p class="note">거리순 정렬을 쓰려면 위치 접근을 허용해주세요. 카드를 누르면 사진·소개·추천메뉴·리뷰(준비되는 대로)와 함께 T맵·네이버지도·카카오맵·Apple지도·구글지도로 바로 안내를 시작할 수 있는 버튼이 나옵니다. 앱이 설치되어 있지 않으면 반응이 없을 수 있어요.</p>
+  <p class="note">거리순 정렬을 쓰려면 위치 접근을 허용해주세요. 카드를 누르면 사진·소개·추천메뉴·리뷰(준비되는 대로)와 함께 T맵·네이버지도·카카오맵·카카오내비·Apple지도·구글지도로 바로 안내를 시작할 수 있는 버튼이 나옵니다. 카카오내비는 이름을 자동으로 복사해주니 앱이 열리면 검색창에 붙여넣기만 하면 됩니다. 앱이 설치되어 있지 않으면 반응이 없을 수 있어요.</p>
 </div>
 
 <script>
@@ -154,6 +155,7 @@ function mapLinks(item) {
       { cls: "tmap", label: "T맵으로 안내", href: `tmap://route?rGoName=${enc}&rGoX=${lo}&rGoY=${la}` },
       { cls: "naver", label: "네이버지도로 안내", href: `nmap://route/car?dlat=${la}&dlng=${lo}&dname=${enc}&appname=com.studio209.inboxautopilot` },
       { cls: "kakaomap", label: "카카오맵 길안내(차량)", href: `kakaomap://route?ep=${la},${lo}&by=CAR` },
+      { cls: "kakao", label: "카카오내비 실행 (이름 복사)", clip: item.name },
       { cls: "apple", label: "Apple 지도에서 보기", href: `https://maps.apple.com/?q=${enc}&ll=${la},${lo}` },
       { cls: "google", label: "구글지도로 안내", href: `https://www.google.com/maps/dir/?api=1&destination=${addrEnc || enc}&travelmode=driving` },
     ];
@@ -162,9 +164,23 @@ function mapLinks(item) {
     { cls: "tmap", label: "T맵에서 검색", href: `tmap://search?name=${enc}` },
     { cls: "naver", label: "네이버지도에서 검색", href: `https://map.naver.com/p/search/${enc}` },
     { cls: "kakaomap", label: "카카오맵에서 검색", href: `https://map.kakao.com/link/search/${enc}` },
+    { cls: "kakao", label: "카카오내비 실행 (이름 복사)", clip: item.name },
     { cls: "apple", label: "Apple 지도에서 검색", href: `https://maps.apple.com/?q=${enc}` },
     { cls: "google", label: "구글지도에서 검색", href: `https://www.google.com/maps/search/?api=1&query=${enc}` },
   ];
+}
+
+function kakaoNaviClip(btn, name) {
+  const original = btn.textContent;
+  const go = () => { setTimeout(() => { location.href = "kakaonavi://"; }, 250); };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(name).then(() => {
+      btn.textContent = "복사됨! 검색창에 붙여넣기 하세요";
+      setTimeout(() => { btn.textContent = original; }, 3000);
+    }).catch(() => {}).finally(go);
+  } else {
+    go();
+  }
 }
 
 function renderRibbonSeg() {
@@ -361,6 +377,8 @@ function renderResultsList() {
         const item = list[Number(i)];
         panel.innerHTML = buildPanel(item);
         panel.dataset.filled = "1";
+        const clipBtn = panel.querySelector("button[data-clip]");
+        if (clipBtn) clipBtn.addEventListener("click", () => kakaoNaviClip(clipBtn, clipBtn.getAttribute("data-clip")));
       }
     }
   }));
@@ -383,7 +401,11 @@ function buildPanel(item) {
   if (!item.photo && !item.desc && !(item.menu && item.menu.length) && !item.review) {
     html += `<p class="content-pending">소개·추천메뉴·리뷰 요약은 준비 중입니다.</p>`;
   }
-  const btns = mapLinks(item).map(b => `<a class="btn ${b.cls}" href="${b.href}">${b.label}</a>`).join("");
+  const btns = mapLinks(item).map(b =>
+    b.clip
+      ? `<button type="button" class="btn ${b.cls}" data-clip="${b.clip.replace(/"/g, "&quot;")}">${b.label}</button>`
+      : `<a class="btn ${b.cls}" href="${b.href}">${b.label}</a>`
+  ).join("");
   html += `<div class="btns">${btns}</div>`;
   return html;
 }
