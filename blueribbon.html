@@ -100,9 +100,12 @@
     border: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
   .info-row { font-size: 16px; line-height: 1.5; color: var(--text); }
   .info-row b { display: inline-block; min-width: 74px; color: var(--muted); font-weight: 600; }
-  .menu-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-  .menu-tag { font-size: 16.5px; font-weight: 600; padding: 4px 10px; border-radius: 20px;
-    background: var(--bg); border: 1px solid var(--line); color: var(--text); }
+  .menu-list { margin-top: 10px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .menu-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+    font-size: 16.5px; padding: 9px 12px; border-bottom: 1px dashed var(--line); background: var(--bg); }
+  .menu-row:last-child { border-bottom: none; }
+  .menu-name { color: var(--text); font-weight: 600; }
+  .menu-price { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; flex: none; }
   .review-box { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: var(--bg);
     border: 1px solid var(--line); }
   .review-box p { margin: 0; font-size: 18px; font-style: italic; color: var(--text); line-height: 1.5; }
@@ -401,7 +404,12 @@ function buildPanel(item) {
   }
   if (item.desc) html += `<p class="card-desc">${item.desc}</p>`;
   if (item.menu && item.menu.length) {
-    html += `<div class="menu-tags">${item.menu.map(m => `<span class="menu-tag">${m}</span>`).join("")}</div>`;
+    const rows = item.menu.map(m => {
+      const n = typeof m === "string" ? m : (m.n || "");
+      const p = typeof m === "string" ? "" : (m.p || "");
+      return `<div class="menu-row"><span class="menu-name">${n}</span>${p ? `<span class="menu-price">${p}</span>` : ""}</div>`;
+    }).join("");
+    html += `<div class="menu-list">${rows}</div>`;
   }
   if (item.review) {
     const rev = typeof item.review === "string" ? { summary: item.review } : item.review;
