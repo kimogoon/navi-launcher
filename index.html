@@ -38,6 +38,8 @@
     border-top: 1px solid var(--line); padding-top: 14px; }
   .missing { background: var(--card); border: 1px solid var(--line); border-radius: 12px;
     padding: 16px; font-size: 14px; line-height: 1.6; margin-top: 18px; }
+  .notice { font-size: 14px; line-height: 1.6; margin: 4px 0 18px; padding: 12px 14px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px; }
 </style>
 </head>
 <body>
@@ -47,6 +49,7 @@
   <div class="eyebrow">약속 장소 길안내</div>
   <h1 id="place">장소</h1>
   <div class="when" id="when"></div>
+  <div class="notice" id="notice"></div>
   <div class="btns" id="btns"></div>
   <p class="resolved" id="resolved"></p>
   <p class="note">버튼을 누르면 해당 내비 앱이 목적지가 설정된 상태로 실행됩니다.
@@ -57,7 +60,7 @@
   // d= : 한글 퍼센트 인코딩(글자당 9자)이 링크를 부풀려 base64url 로 압축한 형식.
   //      payload = 명칭 \x1f 위도 \x1f 경도 \x1f 일시 \x1f 주소
   //      예전 n/la/lo/w/a 링크도 계속 열리도록 폴백을 남겨 둔다.
-  let name, la, lo, when, addr;
+  let name, la, lo, when, addr, notice;
   const d = p.get('d');
   if (d) {
     const b = d.replace(/-/g, '+').replace(/_/g, '/');
@@ -66,18 +69,22 @@
       Uint8Array.from(bin, c => c.charCodeAt(0))).split('\u001f');
     name = parts[0] || '약속 장소';
     la = parseFloat(parts[1]); lo = parseFloat(parts[2]);
-    when = parts[3] || ''; addr = parts[4] || '';
+    when = parts[3] || ''; addr = parts[4] || ''; notice = parts[5] || '';
   } else {
     name = p.get('n') || '약속 장소';
     la = parseFloat(p.get('la')); lo = parseFloat(p.get('lo'));
     when = p.get('w') || '';
     addr = p.get('a') || '';
+    notice = p.get('m') || '';
   }
   document.getElementById('place').textContent = name;
   // 일시는 링크에서 뺐다(길이 단축) — 비어 있으면 빈 줄이 남지 않게 숨긴다
   const whenEl = document.getElementById('when');
   whenEl.textContent = when;
   if (!when) whenEl.style.display = 'none';
+  const noticeEl = document.getElementById('notice');
+  noticeEl.textContent = notice ? ('📢 ' + notice) : '';
+  if (!notice) noticeEl.style.display = 'none';
   document.title = '길안내 · ' + name;
   const enc = encodeURIComponent(name);
   const btns = document.getElementById('btns');
