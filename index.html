@@ -40,6 +40,29 @@
     padding: 16px; font-size: 14px; line-height: 1.6; margin-top: 18px; }
   .notice { font-size: 14px; line-height: 1.6; margin: 4px 0 18px; padding: 12px 14px;
     background: var(--card); border: 1px solid var(--line); border-radius: 10px; }
+  .search { margin: 18px 0 4px; }
+  .search-row { display: flex; gap: 8px; }
+  .search-row input { flex: 1; height: 44px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--card); color: var(--text); font-size: 15px; padding: 0 12px; }
+  .search-row input:focus-visible { outline: 3px solid var(--accent); outline-offset: 1px; }
+  .search-row button { height: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--accent); color: #fff; font-size: 15px; font-weight: 600; }
+  .search-hint { font-size: 12px; color: var(--muted); margin: 6px 2px 0; }
+  .search-results { margin-top: 10px; border: 1px solid var(--line); border-radius: 10px;
+    overflow: hidden; display: none; }
+  .search-results.show { display: block; }
+  .search-results button { display: block; width: 100%; text-align: left; background: var(--card);
+    color: var(--text); border: none; border-bottom: 1px solid var(--line); padding: 12px 14px;
+    font-size: 14px; line-height: 1.4; }
+  .search-results button:last-child { border-bottom: none; }
+  .search-results button:hover, .search-results button:focus-visible { background: var(--bg); }
+  .search-results .rname { font-weight: 700; }
+  .search-results .raddr { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .search-results a.maplink { display: block; padding: 12px 14px; font-size: 14px;
+    background: var(--bg); color: var(--accent); text-decoration: none;
+    border-bottom: 1px solid var(--line); }
+  .search-results a.maplink:last-child { border-bottom: none; }
+  .search-status { font-size: 13px; color: var(--muted); margin-top: 8px; }
 </style>
 </head>
 <body>
@@ -52,6 +75,18 @@
   <div class="notice" id="notice"></div>
   <div class="btns" id="btns"></div>
   <p class="resolved" id="resolved"></p>
+
+  <div class="search">
+    <div class="search-row">
+      <input id="searchInput" type="text" inputmode="search" placeholder="다른 지명·주소 검색"
+        autocomplete="off">
+      <button id="searchBtn" type="button">검색</button>
+    </div>
+    <p class="search-hint">여기서 검색해 고르면 위 목적지가 그 장소로 바뀝니다.</p>
+    <p class="search-status" id="searchStatus"></p>
+    <div class="search-results" id="searchResults"></div>
+  </div>
+
   <p class="note">버튼을 누르면 해당 내비 앱이 목적지가 설정된 상태로 실행됩니다.
     앱이 없으면 반응이 없을 수 있어요 — 아래 지도 링크를 이용하세요.</p>
 </div>
@@ -77,56 +112,181 @@
     addr = p.get('a') || '';
     notice = p.get('m') || '';
   }
-  document.getElementById('place').textContent = name;
-  // 일시는 링크에서 뺐다(길이 단축) — 비어 있으면 빈 줄이 남지 않게 숨긴다
+  // 일시/안내문구는 검색으로 장소를 바꿔도 그대로 유지한다(약속 자체는 안 바뀌니까).
   const whenEl = document.getElementById('when');
   whenEl.textContent = when;
   if (!when) whenEl.style.display = 'none';
   const noticeEl = document.getElementById('notice');
   noticeEl.textContent = notice ? ('📢 ' + notice) : '';
   if (!notice) noticeEl.style.display = 'none';
-  document.title = '길안내 · ' + name;
-  const enc = encodeURIComponent(name);
+
   const btns = document.getElementById('btns');
+  let missingEl = null;
+
   function btn(cls, label, href) {
     const a = document.createElement('a');
     a.className = 'btn ' + cls; a.textContent = label; a.href = href;
     btns.appendChild(a);
+    return a;
   }
-  if (isFinite(la) && isFinite(lo)) {
-    // 순서 고정(2026-08-04 사용자 지정): T맵 > 네이버 > 카카오내비 실행 > 카카오맵 길안내 > Apple 지도
-    btn('tmap', 'T맵으로 안내', `tmap://route?rGoName=${enc}&rGoX=${lo}&rGoY=${la}`);
-    btn('naver', '네이버지도로 안내', `nmap://route/car?dlat=${la}&dlng=${lo}&dname=${enc}&appname=com.studio209.inboxautopilot`);
-    // 카카오내비 직접 '안내'는 유료 API 활성화가 필요해 보류 — 장소명 복사 후 앱 실행
-    const knbtn = document.createElement('a');
-    knbtn.className = 'btn kakao';
-    knbtn.href = '#';
-    knbtn.textContent = '카카오내비 실행 (장소명 복사)';
-    knbtn.addEventListener('click', async (e) => {
-      e.preventDefault();
-      try {
-        await navigator.clipboard.writeText(name);
-        knbtn.textContent = '복사됨! 검색창에 붙여넣기 하세요';
-      } catch (_) { /* 클립보드 거부돼도 실행은 진행 */ }
-      setTimeout(() => { location.href = 'kakaonavi://'; }, 250);
+
+  // 장소 하나를 화면에 그린다 — 페이지 로드 시 링크의 원래 장소로 한 번,
+  // 이후 아래 검색에서 다른 결과를 고를 때마다 다시 호출된다.
+  function renderNav(placeName, placeLa, placeLo, placeAddr) {
+    document.getElementById('place').textContent = placeName;
+    document.title = '길안내 · ' + placeName;
+    btns.innerHTML = '';
+    if (missingEl) { missingEl.remove(); missingEl = null; }
+
+    const enc = encodeURIComponent(placeName);
+
+    if (isFinite(placeLa) && isFinite(placeLo)) {
+      // 순서 고정(2026-08-04 사용자 지정): T맵 > 네이버 > 카카오내비 실행 > 카카오맵 길안내 > Apple 지도
+      btn('tmap', 'T맵으로 안내', `tmap://route?rGoName=${enc}&rGoX=${placeLo}&rGoY=${placeLa}`);
+      btn('naver', '네이버지도로 안내', `nmap://route/car?dlat=${placeLa}&dlng=${placeLo}&dname=${enc}&appname=com.studio209.inboxautopilot`);
+      // 카카오내비 직접 '안내'는 유료 API 활성화가 필요해 보류 — 장소명 복사 후 앱 실행
+      const knbtn = document.createElement('a');
+      knbtn.className = 'btn kakao';
+      knbtn.href = '#';
+      knbtn.textContent = '카카오내비 실행 (장소명 복사)';
+      knbtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        try {
+          await navigator.clipboard.writeText(placeName);
+          knbtn.textContent = '복사됨! 검색창에 붙여넣기 하세요';
+        } catch (_) { /* 클립보드 거부돼도 실행은 진행 */ }
+        setTimeout(() => { location.href = 'kakaonavi://'; }, 250);
+      });
+      btns.appendChild(knbtn);
+      btn('kakaomap', '카카오맵 길안내(차량)', `kakaomap://route?ep=${placeLa},${placeLo}&by=CAR`);
+      btn('apple', 'Apple 지도에서 보기', `https://maps.apple.com/?q=${enc}&ll=${placeLa},${placeLo}`);
+      // 구글맵: 좌표를 주면 '핀 고정 위치'로 떠서, 장소명으로 검색해 정식 명칭이 뜨게 한다
+      const gDest = placeAddr ? encodeURIComponent(placeAddr)
+        : ((placeName && placeName !== '약속 장소') ? enc : `${placeLa},${placeLo}`);
+      btn('google', '구글지도로 안내', `https://www.google.com/maps/dir/?api=1&destination=${gDest}&travelmode=driving`);
+      document.getElementById('resolved').textContent =
+        (placeAddr ? placeAddr + ' · ' : '') + `좌표 ${placeLa.toFixed(5)}, ${placeLo.toFixed(5)}`;
+    } else {
+      missingEl = document.createElement('div');
+      missingEl.className = 'missing';
+      missingEl.textContent = '이 장소는 좌표를 찾지 못해 검색으로 엽니다. 지도에서 장소를 연 뒤 내비 버튼을 누르거나, 아래에서 직접 검색해 보세요.';
+      document.querySelector('.wrap').insertBefore(missingEl, btns);
+      btn('tmap', 'T맵에서 검색', `tmap://search?name=${enc}`);
+      btn('naver', '네이버지도에서 검색', `https://map.naver.com/p/search/${enc}`);
+      btn('kakaomap', '카카오맵에서 검색', `https://map.kakao.com/link/search/${enc}`);
+      btn('apple', 'Apple 지도에서 검색', `https://maps.apple.com/?q=${enc}`);
+      btn('google', '구글지도에서 검색', `https://www.google.com/maps/search/?api=1&query=${enc}`);
+      document.getElementById('resolved').textContent = '';
+    }
+  }
+
+  renderNav(name, la, lo, addr);
+
+  // --- 런처 자체 검색: OpenStreetMap Nominatim (키 필요 없음, 무료) ---
+  // 검색해서 고른 결과로 renderNav 를 다시 불러 위 버튼들을 그 장소 기준으로 교체한다.
+  const searchInput = document.getElementById('searchInput');
+  const searchBtn = document.getElementById('searchBtn');
+  const searchStatus = document.getElementById('searchStatus');
+  const searchResults = document.getElementById('searchResults');
+  let searchSeq = 0;
+
+  function clearResults() {
+    searchResults.innerHTML = '';
+    searchResults.classList.remove('show');
+  }
+
+  // Nominatim 의 display_name 은 좁은 단위 → 넓은 단위 순서(영문권 방식)에
+  // 우편번호·'대한민국'까지 붙어 길다. 한국식(넓은 → 좁은)으로 뒤집고
+  // 군더더기를 떼서 '경기도 하남시 신장동 미사대로 750' 처럼 만든다.
+  function tidyAddr(displayName, placeName) {
+    const parts = displayName.split(',').map(s => s.trim()).filter(Boolean);
+    const drop = new Set(['대한민국']);
+    const kept = parts.filter((s, i) => {
+      if (drop.has(s)) return false;
+      if (/^\d{5}$/.test(s)) return false;            // 우편번호
+      if (i === 0 && s === placeName) return false;   // 맨 앞 중복 상호명
+      return true;
     });
-    btns.appendChild(knbtn);
-    btn('kakaomap', '카카오맵 길안내(차량)', `kakaomap://route?ep=${la},${lo}&by=CAR`);
-    btn('apple', 'Apple 지도에서 보기', `https://maps.apple.com/?q=${enc}&ll=${la},${lo}`);
-    // 구글맵: 좌표를 주면 '핀 고정 위치'로 떠서, 장소명으로 검색해 정식 명칭이 뜨게 한다
-    const gDest = addr ? encodeURIComponent(addr) : ((name && name !== '약속 장소') ? enc : `${la},${lo}`);
-    btn('google', '구글지도로 안내', `https://www.google.com/maps/dir/?api=1&destination=${gDest}&travelmode=driving`);
-    document.getElementById('resolved').textContent = (addr ? addr + ' · ' : '') + `좌표 ${la.toFixed(5)}, ${lo.toFixed(5)}`;
-  } else {
-    const d = document.createElement('div');
-    d.className = 'missing';
-    d.textContent = '이 장소는 좌표를 찾지 못해 검색으로 엽니다. 지도에서 장소를 연 뒤 내비 버튼을 누르세요.';
-    document.querySelector('.wrap').insertBefore(d, btns);
-    btn('tmap', 'T맵에서 검색', `tmap://search?name=${enc}`);
-    btn('naver', '네이버지도에서 검색', `https://map.naver.com/p/search/${enc}`);
-    btn('kakaomap', '카카오맵에서 검색', `https://map.kakao.com/link/search/${enc}`);
-    btn('apple', 'Apple 지도에서 검색', `https://maps.apple.com/?q=${enc}`);
-    btn('google', '구글지도에서 검색', `https://www.google.com/maps/search/?api=1&query=${enc}`);
+    return kept.reverse().join(' ');
+  }
+
+  // 지도앱 바로 검색 링크 — Nominatim(OSM)은 역·주소·랜드마크는 잘 찾지만
+  // '인천혼다' 같은 국내 소상공인 상호는 대부분 없다. 브라우저에서 카카오
+  // 지도 검색 API 를 직접 부를 수는 없어서(CORS 차단 확인) 좌표를 못 구한
+  // 검색어는 지도앱으로 그대로 넘겨 준다 — 앱 안에서는 다 찾아진다.
+  function appendMapAppLinks(q) {
+    const encQ = encodeURIComponent(q);
+    const apps = [
+      ['카카오맵', `https://map.kakao.com/link/search/${encQ}`],
+      ['네이버지도', `https://map.naver.com/p/search/${encQ}`],
+      ['T맵', `tmap://search?name=${encQ}`],
+      ['구글지도', `https://www.google.com/maps/search/?api=1&query=${encQ}`],
+    ];
+    apps.forEach(([label, href]) => {
+      const a = document.createElement('a');
+      a.href = href;
+      a.className = 'maplink';
+      a.textContent = `${label}에서 '${q}' 검색`;
+      searchResults.appendChild(a);
+    });
+    searchResults.classList.add('show');
+  }
+
+  async function runSearch(query) {
+    const q = (query || '').trim();
+    if (!q) return;
+    const mySeq = ++searchSeq;
+    clearResults();
+    searchStatus.textContent = '검색 중…';
+    let list = [];
+    try {
+      const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1'
+        + '&countrycodes=kr&accept-language=ko&limit=6&q=' + encodeURIComponent(q);
+      const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      if (mySeq !== searchSeq) return; // 그 사이 새 검색이 시작됐으면 이 결과는 버린다
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      list = await res.json();
+    } catch (err) {
+      if (mySeq !== searchSeq) return;
+      searchStatus.textContent = '검색 서버에 연결하지 못했습니다. 지도앱에서 바로 열어 보세요.';
+      appendMapAppLinks(q);
+      return;
+    }
+
+    list.forEach(item => {
+      const row = document.createElement('button');
+      row.type = 'button';
+      const display = (item.name && item.name.trim()) || item.display_name.split(',')[0];
+      const addrText = tidyAddr(item.display_name, display);
+      row.innerHTML = `<div class="rname"></div><div class="raddr"></div>`;
+      row.querySelector('.rname').textContent = display;
+      row.querySelector('.raddr').textContent = addrText;
+      row.addEventListener('click', () => {
+        renderNav(display, parseFloat(item.lat), parseFloat(item.lon), addrText);
+        clearResults();
+        searchStatus.textContent = '';
+        searchInput.value = display;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+      searchResults.appendChild(row);
+    });
+
+    searchStatus.textContent = list.length
+      ? '고르면 목적지가 바뀝니다. 상호가 안 보이면 아래 지도앱에서 바로 찾아보세요.'
+      : `'${q}' 좌표를 못 찾았습니다 — 지도앱에서 바로 열어 보세요.`;
+    appendMapAppLinks(q);
+  }
+
+  searchBtn.addEventListener('click', () => runSearch(searchInput.value));
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); runSearch(searchInput.value); }
+  });
+
+  // 좌표를 못 찾은 채로 열린 경우, 원래 장소명으로 미리 검색해 후보를 바로 보여준다
+  // (자동으로 목적지를 바꾸지는 않는다 — 사용자가 목록에서 직접 골라야 바뀐다).
+  if (!(isFinite(la) && isFinite(lo)) && name && name !== '약속 장소') {
+    searchInput.value = name;
+    runSearch(name);
   }
 </script>
 
