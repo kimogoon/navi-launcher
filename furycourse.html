@@ -184,6 +184,11 @@ h1 small{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.02em;
 .bdg.bm12{background:#1C1C1C;color:#FFFFFF}
 .bdg.bm13{background:#6FB3A0;color:#12160C}
 .bdg.bm14{background:#111827;color:#F97316}
+.nearbar{display:none;gap:6px;margin:0 0 10px}
+.nearbar.on{display:flex}
+.nearbar button{flex:1;font:600 12.5px/1 var(--sans);padding:9px 6px;border-radius:9px;
+  cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--fg2)}
+.nearbar button[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
 .quickbar{display:flex;gap:8px;margin:0 0 10px}
 .qchip{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;
   padding:10px 4px;border:1px solid var(--line);border-radius:12px;cursor:pointer;
@@ -211,6 +216,11 @@ button:focus-visible,a:focus-visible,.tile:focus-visible{outline:2px solid var(-
     <button id="io" class="io is-paste" aria-label="붙여넣기"><svg class="ic-paste" viewBox="0 0 24 24" aria-hidden="true"> <rect x="8.5" y="2.8" width="7" height="3.8" rx="1.2"/> <path d="M15.5 4.7H18a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V5.7a1 1 0 0 1 1-1h2.5"/> </svg><svg class="ic-clear" viewBox="0 0 24 24" aria-hidden="true"> <path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/> </svg></button>
   </div>
 
+  <div id="nearBar" class="nearbar">
+    <button data-nk="c" aria-pressed="true">카페</button>
+    <button data-nk="d" aria-pressed="false">정비·딜러</button>
+    <button data-nk="gas" aria-pressed="false">주유소</button>
+  </div>
   <div id="modeSeg" class="seg"></div>
   <div id="filterSeg" class="seg"></div>
   <div class="quickbar">
@@ -264,6 +274,7 @@ let brand = null, sido = null, gu = null, filter = "ALL", q = "";
 const PIN_KEY = "furycourse.pins.v1", RECENT_KEY = "furycourse.recent.v1", RECENT_MAX = 8;
 const keyOf = r => r.k + "|" + r.name + "|" + r.lat.toFixed(5);
 const readLS = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch(e) { return d; } };
+let nearKind = "c";
 let pins = new Set(readLS(PIN_KEY, []));
 let recent = readLS(RECENT_KEY, []);
 const savePins = () => localStorage.setItem(PIN_KEY, JSON.stringify([...pins]));
@@ -287,6 +298,7 @@ function dist(r){
 }
 
 function pool(){
+  if (mode === "near")   return nearKind === "gas" ? gasPool() : DATA.filter(r => r.k === nearKind);
   if (mode === "pin")    return DATA.filter(r => pins.has(keyOf(r)));
   if (mode === "recent") return recent.map(k => DATA.find(r => keyOf(r) === k)).filter(Boolean);
   let rows = DATA.filter(r => r.k === mode);
@@ -305,6 +317,25 @@ function pool(){
 /* 브랜드 타일은 데이터에 담긴 순서(원산지 묶음)를 그대로 쓴다.
    지역 타일은 곳 수가 많은 순. */
 const BRAND_SEQ = [...new Set(DATA.filter(r => r.k === "d").map(r => r.brand))];
+
+/* 주유소는 별도 레코드가 아니라 각 지점의 gasl 안에 들어 있다.
+   '내 주변 → 주유소' 를 위해 이름+거리로 중복을 걷어내 한 벌로 만든다.
+   좌표는 없고(오피넷이 지점 기준 거리만 준다) 지점에 딸린 정보라,
+   가까운 지점의 좌표를 빌려 거리 정렬에만 쓴다. */
+let GAS = null;
+function gasPool(){
+  if (GAS) return GAS;
+  const seen = new Map();
+  DATA.forEach(r => (r.gasl || []).forEach(g => {
+    const k = g.n;
+    if (!seen.has(k) || seen.get(k).d > g.d)
+      seen.set(k, {k:"g", name:g.n, addr:(r.addr||"").split(" ").slice(0,3).join(" ") + " 인근",
+                   lat:r.lat, lon:r.lon, d:g.d, g:g.g, pg:g.pg, pp:g.pp, mt:g.mt,
+                   near:r.name});
+  }));
+  GAS = [...seen.values()];
+  return GAS;
+}
 function countBy(rows, key){
   const m = new Map();
   rows.forEach(r => { const v = r[key] || "기타"; m.set(v, (m.get(v)||0)+1); });
@@ -393,6 +424,30 @@ function panel(r){
   </div>`;
 }
 
+function gasCard(g){
+  const d = dist(g), enc = encodeURIComponent(g.name);
+  const b = [];
+  if (g.g)  b.push(["", "휘발유 " + g.g.toLocaleString()]);
+  if (g.pg) b.push(["fu", "고급유" + (g.pp ? " " + g.pp.toLocaleString() : "")]);
+  if (g.mt) b.push(["ok", "경정비"]);
+  b.push(["", g.near + " 인근"]);
+  return `<article class="card" data-k="g">
+    <div class="card-head"><span class="bar" style="background:var(--fuel)"></span>
+      <div class="card-main">
+        <div class="card-name-row"><span class="card-name">${esc(g.name)}</span></div>
+        <div class="card-addr">${esc(g.addr)}</div>
+        <div class="badges">${b.map(([c,t]) => `<span class="b ${c}">${esc(t)}</span>`).join("")}</div>
+      </div>
+      ${d != null ? `<span class="dist">${d < 1 ? Math.round(d*1000)+"m" : d.toFixed(1)+"km"}</span>` : ""}
+    </div>
+    <div class="panel" style="display:flex">
+      <div class="btns">
+        <a class="n-tmap"  href="tmap://route?rGoName=${enc}&rGoX=${g.lon}&rGoY=${g.lat}">T맵으로 안내</a>
+        <a class="n-kmap"  href="https://applink.map.kakao.com/route?sp=&sn=&ep=${g.lat}%2C${g.lon}&en=${enc}&by=car">카카오맵 길안내</a>
+      </div>
+    </div></article>`;
+}
+
 function card(r, i){
   const d = dist(r);
   return `<article class="card" data-t="${r.tier||""}" data-k="${r.k}" data-i="${i}">
@@ -413,7 +468,7 @@ function render(){
   const rows = pool();
 
   if (typeof qNear !== "undefined"){
-    qNear.setAttribute("aria-pressed", String(!!here));
+    qNear.setAttribute("aria-pressed", String(mode === "near"));
     qPin.setAttribute("aria-pressed", String(mode === "pin"));
   }
 
@@ -424,6 +479,21 @@ function render(){
     + (recent.length ? `<button data-m="recent" aria-pressed="${mode==="recent"}">최근 본 곳<span class="n">${recent.length}</span></button>` : "");
 
   /* 필터 세그 */
+  if (mode === "near"){
+    $("#filterSeg").innerHTML = "";
+    const label = {c:"바이크 카페", d:"정비·딜러", gas:"주유소"}[nearKind];
+    if (!here){
+      $("#crumbs").innerHTML = `<span>위치를 확인하는 중…</span>`;
+      $("#screen").innerHTML = `<p class="empty">위치 접근을 허용하면 가까운 순으로 보여드립니다.</p>`;
+      return;
+    }
+    const sorted = [...rows].sort((a,b) => (dist(a) ?? 9e9) - (dist(b) ?? 9e9)).slice(0, 60);
+    $("#crumbs").innerHTML = `<span>내 주변 ${label} · 가까운 순 ${sorted.length}곳</span>`;
+    $("#screen").innerHTML = sorted.length
+      ? `<div class="list">${sorted.map(r => nearKind === "gas" ? gasCard(r) : card(r, DATA.indexOf(r))).join("")}</div>`
+      : `<p class="empty">주변에 표시할 곳이 없습니다.</p>`;
+    return;
+  }
   if (mode === "pin" || mode === "recent"){
     $("#filterSeg").innerHTML = "";
     $("#crumbs").innerHTML = `<span>${mode === "pin" ? "즐겨찾기" : "최근 본 곳"} ${rows.length}곳</span>`;
@@ -471,7 +541,8 @@ function render(){
 /* ── 이벤트 ── */
 $("#modeSeg").addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
-  mode = b.dataset.m; filter = "ALL"; brand = sido = gu = null; q = ""; input.value = ""; syncIO(); render();
+  mode = b.dataset.m; filter = "ALL"; brand = sido = gu = null; q = "";
+  input.value = ""; syncIO(); nearBar.classList.remove("on"); render();
 });
 $("#filterSeg").addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
@@ -545,18 +616,35 @@ syncIO();
 
 const qNear = $("#qNear"), qPin = $("#qPin"), qReset = $("#qReset");
 
-qNear.addEventListener("click", () => {
-  if (here){                                   /* 다시 누르면 거리순 해제 */
-    here = null; qNear.setAttribute("aria-pressed", "false"); render(); return;
-  }
+const nearBar = $("#nearBar");
+
+function locate(){
   if (!navigator.geolocation){ alert("이 브라우저는 위치를 지원하지 않습니다."); return; }
   qNear.classList.add("busy");
   navigator.geolocation.getCurrentPosition(
     p => { here = {lat: p.coords.latitude, lon: p.coords.longitude};
-           qNear.classList.remove("busy"); qNear.setAttribute("aria-pressed", "true"); render(); },
-    () => { qNear.classList.remove("busy");
-            alert("위치 접근이 거부되었습니다. 설정에서 허용해주세요."); },
+           qNear.classList.remove("busy"); render(); },
+    () => { qNear.classList.remove("busy"); mode = "c"; nearBar.classList.remove("on");
+            render(); alert("위치 접근이 거부되었습니다. 설정에서 허용해주세요."); },
     {enableHighAccuracy:true, timeout:8000, maximumAge:60000});
+}
+
+qNear.addEventListener("click", () => {
+  if (mode === "near"){                       /* 다시 누르면 빠져나온다 */
+    mode = "c"; nearBar.classList.remove("on"); render(); return;
+  }
+  mode = "near"; filter = "ALL"; brand = sido = gu = null; q = "";
+  input.value = ""; syncIO(); nearBar.classList.add("on");
+  render();
+  if (!here) locate(); 
+});
+
+nearBar.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  nearKind = b.dataset.nk;
+  nearBar.querySelectorAll("button").forEach(x =>
+    x.setAttribute("aria-pressed", String(x === b)));
+  render();
 });
 
 qPin.addEventListener("click", () => {
@@ -566,8 +654,8 @@ qPin.addEventListener("click", () => {
 });
 
 qReset.addEventListener("click", () => {
-  mode = "c"; filter = "ALL"; brand = sido = gu = null; q = "";
-  input.value = ""; syncIO();
+  mode = "c"; filter = "ALL"; brand = sido = gu = null; q = ""; nearKind = "c";
+  input.value = ""; syncIO(); nearBar.classList.remove("on");
   document.querySelectorAll(".card.open").forEach(c => c.classList.remove("open"));
   window.scrollTo({top: 0, behavior: "smooth"});
   render();
