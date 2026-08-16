@@ -40,7 +40,8 @@
     padding: 16px; font-size: 14px; line-height: 1.6; margin-top: 18px; }
   .notice { font-size: 14px; line-height: 1.6; margin: 4px 0 18px; padding: 12px 14px;
     background: var(--card); border: 1px solid var(--line); border-radius: 10px; }
-  .search { margin: 18px 0 4px; }
+  /* 검색은 맨 위 — 아래 목적지 영역과 구분선으로 갈라 준다(2026-08-16 사용자 지정) */
+  .search { margin: 0 0 20px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
   .search-row { display: flex; gap: 8px; }
   .search-row input { flex: 1; height: 44px; border-radius: 10px; border: 1px solid var(--line);
     background: var(--card); color: var(--text); font-size: 15px; padding: 0 12px; }
@@ -69,23 +70,23 @@
 
 
 <div class="wrap">
-  <div class="eyebrow">약속 장소 길안내</div>
-  <h1 id="place">장소</h1>
-  <div class="when" id="when"></div>
-  <div class="notice" id="notice"></div>
-  <div class="btns" id="btns"></div>
-  <p class="resolved" id="resolved"></p>
-
   <div class="search">
     <div class="search-row">
       <input id="searchInput" type="text" inputmode="search" placeholder="다른 지명·주소 검색"
         autocomplete="off">
       <button id="searchBtn" type="button">검색</button>
     </div>
-    <p class="search-hint">여기서 검색해 고르면 위 목적지가 그 장소로 바뀝니다.</p>
+    <p class="search-hint">검색해서 고르면 아래 목적지가 그 장소로 바뀝니다.</p>
     <p class="search-status" id="searchStatus"></p>
     <div class="search-results" id="searchResults"></div>
   </div>
+
+  <div class="eyebrow">약속 장소 길안내</div>
+  <h1 id="place">장소</h1>
+  <div class="when" id="when"></div>
+  <div class="notice" id="notice"></div>
+  <div class="btns" id="btns"></div>
+  <p class="resolved" id="resolved"></p>
 
   <p class="note">버튼을 누르면 해당 내비 앱이 목적지가 설정된 상태로 실행됩니다.
     앱이 없으면 반응이 없을 수 있어요 — 아래 지도 링크를 이용하세요.</p>
@@ -266,7 +267,8 @@
         clearResults();
         searchStatus.textContent = '';
         searchInput.value = display;
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // 검색창이 맨 위라, 고른 뒤에는 바뀐 목적지와 내비 버튼이 보이도록 내려 준다.
+        document.getElementById('place').scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
       searchResults.appendChild(row);
     });
