@@ -2,8 +2,21 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- viewport-fit=cover: 홈 화면에 추가해 전체화면(standalone)으로 뜨면 상단
+     노치·하단 홈바 영역까지 화면이 확장된다. 아래 .wrap 의 safe-area 패딩과 짝 -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>길안내</title>
+
+<!-- 홈 화면에 추가(PWA) — 아이폰에서 앱처럼 쓰기 위한 설정 -->
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="길안내">
+<!-- black-translucent: 상태바를 페이지 배경 위에 겹쳐 라이트/다크 모두 자연스럽게 -->
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#F6F7F9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16181C" media="(prefers-color-scheme: dark)">
 <style>
   :root {
     --bg: #F6F7F9; --card: #FFFFFF; --text: #1A1D21; --muted: #6B7280;
@@ -19,7 +32,11 @@
     /* 가로 넘침이 생기면 아이폰에서 가운데 정렬이 풀린 것처럼 보인다 */
     overflow-x: hidden;
     font-family: "Apple SD Gothic Neo", Pretendard, -apple-system, sans-serif; }
-  .wrap { max-width: 420px; margin: 0 auto; padding: 28px 20px 40px; }
+  /* safe-area: 홈 화면에 추가해 전체화면으로 뜰 때 노치·홈바를 피한다.
+     Safari 로 볼 때는 env() 가 0 이라 기존 여백 그대로다. */
+  .wrap { max-width: 420px; margin: 0 auto;
+    padding: calc(28px + env(safe-area-inset-top)) calc(20px + env(safe-area-inset-right))
+             calc(40px + env(safe-area-inset-bottom)) calc(20px + env(safe-area-inset-left)); }
   .eyebrow { font-size: 12px; letter-spacing: .12em; color: var(--muted); text-transform: uppercase; }
   h1 { font-size: 24px; line-height: 1.3; margin: 6px 0 2px; text-wrap: balance; }
   .when { font-size: 15px; color: var(--muted); margin-bottom: 20px; }
@@ -73,6 +90,11 @@
     border-bottom: 1px solid var(--line); }
   .search-results a.maplink:last-child { border-bottom: none; }
   .search-status { font-size: 13px; color: var(--muted); margin-top: 8px; }
+  /* 홈 화면 아이콘으로 열었을 때(목적지 없음) 보여 주는 빈 화면 */
+  .empty { text-align: center; padding: 44px 8px 20px; }
+  .empty-mark { font-size: 44px; line-height: 1; }
+  .empty-title { font-size: 19px; font-weight: 700; margin: 14px 0 6px; }
+  .empty-sub { font-size: 14px; line-height: 1.7; color: var(--muted); margin: 0; }
 </style>
 </head>
 <body>
@@ -90,15 +112,25 @@
     <div class="search-results" id="searchResults"></div>
   </div>
 
-  <div class="eyebrow">약속 장소 길안내</div>
-  <h1 id="place">장소</h1>
-  <div class="when" id="when"></div>
-  <div class="notice" id="notice"></div>
-  <div class="btns" id="btns"></div>
-  <p class="resolved" id="resolved"></p>
+  <!-- 목적지 영역. 홈 화면 아이콘으로 열면(링크 파라미터 없음) 통째로 숨기고
+       대신 아래 .empty 안내를 띄운다 — '약속 장소'라는 가짜 목적지가 뜨면 안 된다. -->
+  <div id="dest">
+    <div class="eyebrow">약속 장소 길안내</div>
+    <h1 id="place">장소</h1>
+    <div class="when" id="when"></div>
+    <div class="notice" id="notice"></div>
+    <div class="btns" id="btns"></div>
+    <p class="resolved" id="resolved"></p>
 
-  <p class="note">버튼을 누르면 해당 내비 앱이 목적지가 설정된 상태로 실행됩니다.
-    앱이 없으면 반응이 없을 수 있어요 — 아래 지도 링크를 이용하세요.</p>
+    <p class="note">버튼을 누르면 해당 내비 앱이 목적지가 설정된 상태로 실행됩니다.
+      앱이 없으면 반응이 없을 수 있어요 — 아래 지도 링크를 이용하세요.</p>
+  </div>
+
+  <div class="empty" id="empty" hidden>
+    <div class="empty-mark">🧭</div>
+    <p class="empty-title">어디로 갈까요?</p>
+    <p class="empty-sub">위에서 지명이나 주소를 검색하면<br>T맵·네이버지도·카카오내비로 바로 안내를 시작합니다.</p>
+  </div>
 </div>
 <script>
   const p = new URLSearchParams(location.hash.slice(1));
@@ -107,6 +139,9 @@
   //      예전 n/la/lo/w/a 링크도 계속 열리도록 폴백을 남겨 둔다.
   let name, la, lo, when, addr, notice;
   const d = p.get('d');
+  // 목적지가 링크에 아예 없는 경우 = 홈 화면 아이콘으로 앱처럼 실행한 경우.
+  // 이땐 가짜 '약속 장소'를 만들지 않고 검색 전용 빈 화면으로 시작한다.
+  const hasDest = !!(d || p.get('n'));
   if (d) {
     const b = d.replace(/-/g, '+').replace(/_/g, '/');
     const bin = atob(b + '='.repeat((4 - b.length % 4) % 4));
@@ -143,6 +178,10 @@
   // 장소 하나를 화면에 그린다 — 페이지 로드 시 링크의 원래 장소로 한 번,
   // 이후 아래 검색에서 다른 결과를 고를 때마다 다시 호출된다.
   function renderNav(placeName, placeLa, placeLo, placeAddr) {
+    // 빈 화면 상태였다면(홈 화면 실행) 목적지 영역을 되살린다
+    document.getElementById('dest').hidden = false;
+    document.getElementById('empty').hidden = true;
+
     document.getElementById('place').textContent = placeName;
     document.title = '길안내 · ' + placeName;
     btns.innerHTML = '';
@@ -179,8 +218,10 @@
     } else {
       missingEl = document.createElement('div');
       missingEl.className = 'missing';
-      missingEl.textContent = '이 장소는 좌표를 찾지 못해 검색으로 엽니다. 지도에서 장소를 연 뒤 내비 버튼을 누르거나, 아래에서 직접 검색해 보세요.';
-      document.querySelector('.wrap').insertBefore(missingEl, btns);
+      missingEl.textContent = '이 장소는 좌표를 찾지 못해 검색으로 엽니다. 지도에서 장소를 연 뒤 내비 버튼을 누르거나, 위에서 직접 검색해 보세요.';
+      // btns 의 부모(#dest)에 넣어야 한다 — .wrap 기준으로 insertBefore 하면
+      // btns 가 .wrap 의 직계 자식이 아니라서 NotFoundError 가 난다.
+      btns.parentNode.insertBefore(missingEl, btns);
       btn('tmap', 'T맵에서 검색', `tmap://search?name=${enc}`);
       btn('naver', '네이버지도에서 검색', `https://map.naver.com/p/search/${enc}`);
       btn('kakaomap', '카카오맵에서 검색', `https://map.kakao.com/link/search/${enc}`);
@@ -190,7 +231,17 @@
     }
   }
 
-  renderNav(name, la, lo, addr);
+  if (hasDest) {
+    renderNav(name, la, lo, addr);
+  } else {
+    // 홈 화면 아이콘 실행 — 목적지 없이 검색 전용으로 시작
+    document.getElementById('dest').hidden = true;
+    document.getElementById('empty').hidden = false;
+    document.querySelector('.search-hint').textContent =
+      '지명·주소를 검색해 고르면 바로 안내가 시작됩니다.';
+    document.getElementById('searchInput').placeholder = '지명·주소 검색';
+    document.title = '길안내';
+  }
 
   // --- 런처 자체 검색: OpenStreetMap Nominatim (키 필요 없음, 무료) ---
   // 검색해서 고른 결과로 renderNav 를 다시 불러 위 버튼들을 그 장소 기준으로 교체한다.
@@ -295,7 +346,7 @@
 
   // 좌표를 못 찾은 채로 열린 경우, 원래 장소명으로 미리 검색해 후보를 바로 보여준다
   // (자동으로 목적지를 바꾸지는 않는다 — 사용자가 목록에서 직접 골라야 바뀐다).
-  if (!(isFinite(la) && isFinite(lo)) && name && name !== '약속 장소') {
+  if (hasDest && !(isFinite(la) && isFinite(lo)) && name && name !== '약속 장소') {
     searchInput.value = name;
     runSearch(name);
   }
