@@ -167,9 +167,15 @@
   .search-results .raddr { color: var(--muted); font-size: 12px; margin-top: 2px; }
   .search-status { font-size: 13px; color: var(--muted); margin-top: 8px; }
   /* 홈 화면 아이콘으로 열었을 때(목적지 없음) 보여 주는 빈 화면 */
-  .empty { text-align: center; padding: 34px 8px 8px; }
+  .empty { text-align: center; padding: 8px; }
+  .empty-mark { font-size: 44px; line-height: 1; margin-bottom: 14px; }
   .empty-title { font-size: 19px; font-weight: 700; margin: 0 0 6px; }
   .empty-sub { font-size: 14px; line-height: 1.7; color: var(--muted); margin: 0; }
+  /* 기록이 없어 안내가 뜨는 첫 화면에서는 역할을 바꾼다:
+     안내가 남는 공간 한가운데로 오고(margin auto), 로고는 바닥에 붙는다.
+     auto 마진이 둘 다 있으면 남는 공간을 나눠 가져 둘 다 어중간해진다. */
+  .wrap.is-empty #empty { margin: auto 0; }
+  .wrap.is-empty .brand { margin: 0; }
   /* ── FURYCLASSIC 브랜드 서명 ── */
   /* margin 위아래 auto — 남는 세로 공간을 로고 위/아래로 똑같이 나눠 갖는다.
      목록이 길어 여백이 없으면 auto 는 0 이 되어 평소처럼 아래에 붙는다.
@@ -261,6 +267,7 @@
   </div>
 
   <div class="empty" id="empty" hidden>
+    <div class="empty-mark" aria-hidden="true">🧭</div>
     <p class="empty-title">어디로 갈까요?</p>
     <p class="empty-sub">위에서 지명이나 주소를 검색하면<br>T맵·네이버지도·카카오내비로 바로 안내를 시작합니다.</p>
   </div>
@@ -571,7 +578,10 @@
     // 목적지를 보고 있는 중이면 안내는 무조건 감춘다
     const destShown = !document.getElementById('dest').hidden;
     const first = loadRecent().length === 0;
-    document.getElementById('empty').hidden = destShown || !first;
+    const show = !destShown && first;
+    document.getElementById('empty').hidden = !show;
+    // 안내가 뜰 때만 '안내 가운데 · 로고 바닥' 배치로 바꾼다
+    document.querySelector('.wrap').classList.toggle('is-empty', show);
   }
 
   document.getElementById('recentClear').addEventListener('click', () => {
