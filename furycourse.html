@@ -3,9 +3,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="FURY COURSE">
+<meta name="apple-mobile-web-app-title" content="COFFEE RUN">
 <meta name="theme-color" content="#101014">
-<title>FURY COURSE</title>
+<title>COFFEE RUN</title>
 <style>
 :root{
   --ink:#101014; --red:#E10600;
@@ -153,6 +153,16 @@ h1 small{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.02em;
 .pin{border:0;background:transparent;cursor:pointer;color:var(--fg3);
   font-size:17px;line-height:1;padding:2px 4px;flex:none}
 .pin.on{color:var(--red)}
+/* 내 주변·즐겨찾기·처음으로 아이콘 바 — 길안내 런처의 .quickbar/.chip 과 같은 형식 */
+.quickbar{display:flex;gap:8px;margin:0 0 10px}
+.qchip{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;
+  padding:10px 4px;border:1px solid var(--line);border-radius:12px;cursor:pointer;
+  background:var(--surface);color:var(--fg);font:500 11px/1 var(--sans)}
+.qchip svg{width:21px;height:21px;fill:none;stroke:currentColor;
+  stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.qchip:active{background:var(--raised)}
+.qchip[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
+.qchip.busy{opacity:.6}
 .recent-wrap{margin-bottom:10px}
 .recent-wrap h2{font:700 11px/1 var(--sans);letter-spacing:.13em;color:var(--fg3);
   text-transform:uppercase;margin:0 0 7px}
@@ -162,7 +172,7 @@ button:focus-visible,a:focus-visible,.tile:focus-visible{outline:2px solid var(-
 </head><body>
 <div class="wrap">
   <div class="eyebrow">FURYCLASSIC</div>
-  <h1>FURY COURSE
+  <h1>COFFEE RUN
     <small>바이크 카페 214곳 · 정비·딜러 1137곳 · 반경 편의점과 주유소까지</small></h1>
 
   <div class="search-wrap">
@@ -173,7 +183,17 @@ button:focus-visible,a:focus-visible,.tile:focus-visible{outline:2px solid var(-
 
   <div id="modeSeg" class="seg"></div>
   <div id="filterSeg" class="seg"></div>
-  <div class="seg"><button id="near">가까운 순</button></div>
+  <div class="quickbar">
+    <button class="qchip" id="qNear" type="button" aria-pressed="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5 10.8 10.8 8.5 15.5l4.7-2.3z"/></svg>
+      <span>내 주변</span></button>
+    <button class="qchip" id="qPin" type="button" aria-pressed="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8L3.6 9.7l5.8-.8z"/></svg>
+      <span>즐겨찾기</span></button>
+    <button class="qchip" id="qReset" type="button">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.9 13.4A8 8 0 1 1 18 7.1"/><path d="M18.7 3.1v4.5h-4.5"/></svg>
+      <span>처음으로</span></button>
+  </div>
   <div id="crumbs" class="crumbs"></div>
   <div id="screen"></div>
 
@@ -350,6 +370,11 @@ function card(r, i){
 function render(){
   const rows = pool();
 
+  if (typeof qNear !== "undefined"){
+    qNear.setAttribute("aria-pressed", String(!!here));
+    qPin.setAttribute("aria-pressed", String(mode === "pin"));
+  }
+
   /* 모드 세그 */
   $("#modeSeg").innerHTML = [["c","바이크 카페"],["d","정비·딜러"]].map(([v,l]) =>
     `<button data-m="${v}" aria-pressed="${mode===v}">${l}<span class="n">${DATA.filter(r=>r.k===v).length}</span></button>`).join("")
@@ -472,14 +497,34 @@ io.addEventListener("click", async () => {
 });
 syncIO();
 
-$("#near").addEventListener("click", () => {
+const qNear = $("#qNear"), qPin = $("#qPin"), qReset = $("#qReset");
+
+qNear.addEventListener("click", () => {
+  if (here){                                   /* 다시 누르면 거리순 해제 */
+    here = null; qNear.setAttribute("aria-pressed", "false"); render(); return;
+  }
   if (!navigator.geolocation){ alert("이 브라우저는 위치를 지원하지 않습니다."); return; }
-  $("#near").textContent = "위치 확인 중…";
+  qNear.classList.add("busy");
   navigator.geolocation.getCurrentPosition(
     p => { here = {lat: p.coords.latitude, lon: p.coords.longitude};
-           $("#near").textContent = "가까운 순 ✓"; render(); },
-    () => { $("#near").textContent = "가까운 순"; alert("위치 접근이 거부되었습니다. 설정에서 허용해주세요."); },
+           qNear.classList.remove("busy"); qNear.setAttribute("aria-pressed", "true"); render(); },
+    () => { qNear.classList.remove("busy");
+            alert("위치 접근이 거부되었습니다. 설정에서 허용해주세요."); },
     {enableHighAccuracy:true, timeout:8000, maximumAge:60000});
+});
+
+qPin.addEventListener("click", () => {
+  if (!pins.size){ alert("카드의 ☆ 를 눌러 즐겨찾기에 담아보세요."); return; }
+  mode = (mode === "pin") ? "c" : "pin";
+  filter = "ALL"; brand = sido = gu = null; q = ""; input.value = ""; syncIO(); render();
+});
+
+qReset.addEventListener("click", () => {
+  mode = "c"; filter = "ALL"; brand = sido = gu = null; q = "";
+  input.value = ""; syncIO();
+  document.querySelectorAll(".card.open").forEach(c => c.classList.remove("open"));
+  window.scrollTo({top: 0, behavior: "smooth"});
+  render();
 });
 
 render();
