@@ -415,9 +415,16 @@
   // 좌표 없는 장소가 '위도 0'인 곳으로 둔갑한다. null/빈값은 NaN 으로 되돌린다.
   const num = v => (v === null || v === undefined || v === '') ? NaN : Number(v);
 
-  // 이름 뒤 목적격 조사 을/를 — 한글이 아니면 안전하게 '을(를)'
+  // 이름 뒤 목적격 조사 을/를.
+  // 주소는 '…85번길 25' 처럼 숫자로 끝나는 경우가 많아 숫자도 읽는 음으로 판정한다
+  // (일·삼·육·칠·팔 = 받침 있음 → '을' / 영·이·사·오·구 = 받침 없음 → '를').
+  const DIGIT_HAS_JONG = { '0': false, '1': true, '2': false, '3': true, '4': false,
+                           '5': false, '6': true, '7': true, '8': true, '9': false };
   function objParticle(w) {
-    const c = (w || '').charCodeAt((w || '').length - 1);
+    const s = String(w || '');
+    const last = s[s.length - 1];
+    if (last in DIGIT_HAS_JONG) return DIGIT_HAS_JONG[last] ? '을' : '를';
+    const c = s.charCodeAt(s.length - 1);
     if (!(c >= 0xAC00 && c <= 0xD7A3)) return '을(를)';
     return (c - 0xAC00) % 28 ? '을' : '를';
   }
