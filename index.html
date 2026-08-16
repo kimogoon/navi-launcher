@@ -109,10 +109,6 @@
     font-size: 14px; line-height: 1.4; }
   .search-results button:last-child { border-bottom: none; }
   .search-results button:hover, .search-results button:focus-visible { background: var(--bg); }
-  .search-results a.maplink { display: block; padding: 12px 14px; font-size: 14px;
-    background: var(--bg); color: var(--accent); text-decoration: none;
-    border-bottom: 1px solid var(--line); }
-  .search-results a.maplink:last-child { border-bottom: none; }
   .search-results .rname { font-weight: 700; }
   .search-results .raddr { color: var(--muted); font-size: 12px; margin-top: 2px; }
   .search-status { font-size: 13px; color: var(--muted); margin-top: 8px; }
@@ -248,7 +244,7 @@
 
     const enc = encodeURIComponent(placeName);
 
-    if (isFinite(placeLa) && isFinite(placeLo)) {
+    if (Number.isFinite(placeLa) && Number.isFinite(placeLo)) {
       // 순서 고정(2026-08-04 사용자 지정): T맵 > 네이버 > 카카오내비 실행 > 카카오맵 길안내 > Apple 지도
       btn('tmap', 'T맵으로 안내', `tmap://route?rGoName=${enc}&rGoX=${placeLo}&rGoY=${placeLa}`);
       btn('naver', '네이버지도로 안내', `nmap://route/car?dlat=${placeLa}&dlng=${placeLo}&dname=${enc}&appname=com.studio209.inboxautopilot`);
@@ -348,12 +344,14 @@
   const recentBox = document.getElementById('recent');
   const recentList = document.getElementById('recentList');
 
-  const recentKey = r => `${r.name}|${(+r.la).toFixed(4)},${(+r.lo).toFixed(4)}`;
+  const recentKey = r => Number.isFinite(r.la) && Number.isFinite(r.lo)
+    ? `${r.name}|${(+r.la).toFixed(4)},${(+r.lo).toFixed(4)}`
+    : `${r.name}|nogeo`;               // 좌표 없는 항목(상세주소 등)도 보관한다
 
   function loadRecent() {
     try {
       const v = JSON.parse(localStorage.getItem(RECENT_KEY));
-      return Array.isArray(v) ? v.filter(r => r && r.name && isFinite(r.la) && isFinite(r.lo)) : [];
+      return Array.isArray(v) ? v.filter(r => r && r.name) : [];
     } catch (_) { return []; }          // 사파리 프라이빗 모드 등에서 접근 거부될 수 있다
   }
   function saveRecent(list) {
@@ -413,6 +411,10 @@
   // 조사: 받침 없거나 ㄹ 받침이면 '로', 그 외는 '으로' (사무실'로', 집'으로')
   const SAVED_TO = { home: '집으로', office: '사무실로' };
 
+  // 좌표 정규화. JSON.stringify(NaN) 은 null 로 저장되는데 `+null` 은 0 이라
+  // 좌표 없는 장소가 '위도 0'인 곳으로 둔갑한다. null/빈값은 NaN 으로 되돌린다.
+  const num = v => (v === null || v === undefined || v === '') ? NaN : Number(v);
+
   // 이름 뒤 목적격 조사 을/를 — 한글이 아니면 안전하게 '을(를)'
   function objParticle(w) {
     const c = (w || '').charCodeAt((w || '').length - 1);
@@ -420,10 +422,13 @@
     return (c - 0xAC00) % 28 ? '을' : '를';
   }
 
+  // 좌표가 없어도 저장을 허용한다. 국내 상세주소는 OSM 에 없는 경우가 많아
+  // 좌표를 요구하면 정작 집 주소를 등록할 수 없다(2026-08-17 사용자 피드백).
+  // 좌표 없는 항목은 눌렀을 때 '각 지도앱에서 그 이름으로 검색' 버튼이 뜬다.
   function loadSaved(kind) {
     try {
       const v = JSON.parse(localStorage.getItem(SAVED_KEYS[kind]));
-      return (v && v.name && isFinite(v.la) && isFinite(v.lo)) ? v : null;
+      return (v && v.name) ? v : null;
     } catch (_) { return null; }
   }
   function setSaved(kind, item) {
@@ -437,8 +442,12 @@
   let currentDest = null;
 
   function sameSpot(a, b) {
-    return !!a && !!b && a.name === b.name
-      && Math.abs(a.la - b.la) < 1e-4 && Math.abs(a.lo - b.lo) < 1e-4;
+    if (!a || !b || a.name !== b.name) return false;
+    const aHas = Number.isFinite(a.la) && Number.isFinite(a.lo);
+    const bHas = Number.isFinite(b.la) && Number.isFinite(b.lo);
+    if (aHas !== bHas) return false;
+    if (!aHas) return true;                       // 둘 다 좌표 없음 → 이름이 같으면 같은 곳
+    return Math.abs(a.la - b.la) < 1e-4 && Math.abs(a.lo - b.lo) < 1e-4;
   }
 
   const chipHome = document.getElementById('chipHome');
@@ -504,8 +513,8 @@
   // 목적지 확정 — 검색 결과·최근 검색·집/사무실 모두 여기로 모인다
   function chooseDestination(placeName, placeLa, placeLo, placeAddr) {
     renderNav(placeName, placeLa, placeLo, placeAddr);
-    const item = { name: placeName, la: +placeLa, lo: +placeLo, addr: placeAddr || '' };
-    currentDest = isFinite(item.la) && isFinite(item.lo) ? item : null;
+    const item = { name: placeName, la: num(placeLa), lo: num(placeLo), addr: placeAddr || '' };
+    currentDest = item;                 // 좌표가 없어도 목적지로 인정(저장 가능)
     pushRecent(item);
 
     // 등록 모드로 들어와 있었다면 고른 장소를 그 칸에 바로 저장한다
@@ -570,30 +579,18 @@
       searchResults.classList.add('show');
       searchStatus.textContent = '';
     } else {
-      // 0건일 때만 지도앱으로 넘겨준다. Nominatim(OSM)에는 '인천혼다' 같은
-      // 국내 소상공인 상호가 대부분 없어서, 이게 없으면 막다른 길이 된다.
-      searchStatus.textContent = `'${q}' 좌표를 못 찾았습니다 — 지도앱에서 열어 보세요.`;
-      appendMapAppLinks(q);
+      // 0건이어도 막다른 길로 두지 않는다. Nominatim(OSM)은 '미사강변북로
+      // 85번길 25' 같은 국내 상세 도로명주소나 소상공인 상호를 대부분 못 찾는데,
+      // 지도앱들은 다 찾는다. 그래서 입력한 말 그대로를 목적지로 삼아 아래에
+      // 내비 버튼(각 앱에서 그 이름으로 검색)을 바로 띄운다 — 예전처럼 텍스트
+      // 링크를 나열하지 않는다(2026-08-17 사용자 지정).
+      // 주의: 여기서 chooseDestination 을 쓰면 입력창을 비우고 포커스를 뺏어
+      // 타이핑이 끊긴다. 화면만 갱신하고 입력 상태는 그대로 둔다.
+      renderNav(q, NaN, NaN, '');
+      currentDest = { name: q, la: NaN, lo: NaN, addr: '' };
+      renderSaveBar();
+      searchStatus.textContent = `'${q}' 좌표는 못 찾았습니다 — 아래 버튼으로 지도앱에서 바로 찾습니다.`;
     }
-  }
-
-  // 지도앱 바로 검색 링크 (검색 결과 0건일 때만 사용).
-  // 브라우저에서 카카오 지도 검색 API 는 CORS 로 막혀 직접 못 부른다.
-  function appendMapAppLinks(q) {
-    const encQ = encodeURIComponent(q);
-    [
-      ['카카오맵', `https://map.kakao.com/link/search/${encQ}`],
-      ['네이버지도', `https://map.naver.com/p/search/${encQ}`],
-      ['T맵', `tmap://search?name=${encQ}`],
-      ['구글지도', `https://www.google.com/maps/search/?api=1&query=${encQ}`],
-    ].forEach(([label, href]) => {
-      const a = document.createElement('a');
-      a.href = href;
-      a.className = 'maplink';
-      a.textContent = `${label}에서 '${q}' 검색`;
-      searchResults.appendChild(a);
-    });
-    searchResults.classList.add('show');
   }
 
   function onInput() {
@@ -633,8 +630,7 @@
     if (hasDest) {
       // 링크로 열린 경우엔 링크의 원래 목적지로 되돌린다(앱 초기화와 구분)
       renderNav(name, la, lo, addr);
-      currentDest = (isFinite(la) && isFinite(lo))
-        ? { name, la: +la, lo: +lo, addr: addr || '' } : null;
+      currentDest = { name, la: num(la), lo: num(lo), addr: addr || '' };
     } else {
       document.getElementById('dest').hidden = true;
       document.getElementById('empty').hidden = false;
@@ -661,16 +657,16 @@
 
   // 좌표를 못 찾은 채로 열린 경우, 원래 장소명으로 미리 검색해 후보를 바로 보여준다
   // (자동으로 목적지를 바꾸지는 않는다 — 사용자가 목록에서 직접 골라야 바뀐다).
-  if (hasDest && !(isFinite(la) && isFinite(lo)) && name && name !== '약속 장소') {
+  if (hasDest && !(Number.isFinite(la) && Number.isFinite(lo)) && name && name !== '약속 장소') {
     searchInput.value = name;
     runSearch(name);
   } else if (!hasDest) {
     renderRecent();
   }
 
-  // 링크로 열려 좌표까지 있는 경우엔 그 장소를 집/사무실로 저장할 수 있게 해 둔다
-  if (hasDest && isFinite(la) && isFinite(lo)) {
-    currentDest = { name, la: +la, lo: +lo, addr: addr || '' };
+  // 링크로 열린 경우 그 장소를 집/사무실로 저장할 수 있게 해 둔다(좌표 없어도)
+  if (hasDest) {
+    currentDest = { name, la: num(la), lo: num(lo), addr: addr || '' };
   }
   renderQuickbar();
   renderSaveBar();
