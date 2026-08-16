@@ -36,7 +36,7 @@
      Safari 로 볼 때는 env() 가 0 이라 기존 여백 그대로다. */
   .wrap { max-width: 420px; margin: 0 auto;
     padding: calc(28px + env(safe-area-inset-top)) calc(20px + env(safe-area-inset-right))
-             calc(40px + env(safe-area-inset-bottom)) calc(20px + env(safe-area-inset-left)); }
+             calc(22px + env(safe-area-inset-bottom)) calc(20px + env(safe-area-inset-left)); }
   .eyebrow { font-size: 12px; letter-spacing: .12em; color: var(--muted); text-transform: uppercase; }
   h1 { font-size: 24px; line-height: 1.3; margin: 6px 0 2px; text-wrap: balance; }
   .when { font-size: 15px; color: var(--muted); margin-bottom: 20px; }
@@ -61,7 +61,7 @@
   .notice { font-size: 14px; line-height: 1.6; margin: 4px 0 18px; padding: 12px 14px;
     background: var(--card); border: 1px solid var(--line); border-radius: 10px; }
   /* 검색은 맨 위 — 아래 목적지 영역과 구분선으로 갈라 준다(2026-08-16 사용자 지정) */
-  .search { margin: 0 0 20px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+  .search { margin: 0 0 14px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
   .search-row { position: relative; display: flex; gap: 8px; }
   /* 입력창 안쪽 오른쪽 아이콘 버튼 (붙여넣기 ↔ 지우기) */
   .fieldbtn { position: absolute; top: 50%; right: 5px; transform: translateY(-50%);
@@ -87,9 +87,9 @@
   /* appearance:none 으로 지운 기본 취소버튼 자리를 우리 버튼이 대신한다 */
   .search-row input::-webkit-search-cancel-button { display: none; }
   .search-row input:focus-visible { outline: 3px solid var(--accent); outline-offset: 1px; }
-  .search-hint { font-size: 12px; color: var(--muted); margin: 8px 2px 0; }
+  .search-hint { font-size: 12px; color: var(--muted); margin: 6px 2px 0; }
   /* 집·사무실·처음으로 아이콘 바 */
-  .quickbar { display: flex; gap: 8px; margin-top: 10px; }
+  .quickbar { display: flex; gap: 8px; margin-top: 8px; }
   .chip { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;
     padding: 10px 4px; border: 1px solid var(--line); border-radius: 12px;
     background: var(--card); color: var(--text); font-size: 11px; line-height: 1; }
@@ -104,15 +104,18 @@
     border: 1px solid var(--line); background: var(--card); color: var(--text); }
   .savebar button.on { border-color: var(--accent); color: var(--accent); }
   /* 최근 검색 */
-  .recent { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .recent { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 10px; }
   .recent-head { display: flex; align-items: center; justify-content: space-between;
     font-size: 12px; color: var(--muted); margin-bottom: 6px; }
   .recent-head button { border: none; background: none; color: var(--muted);
     font-size: 12px; text-decoration: underline; padding: 4px 2px; }
   .recent-item { display: flex; align-items: center; gap: 8px; }
   .recent-item > button.pick { flex: 1; min-width: 0; text-align: left; border: none;
-    background: none; color: var(--text); padding: 10px 2px; font-size: 15px; }
-  .recent-item .rn { font-weight: 600; }
+    background: none; color: var(--text); padding: 7px 2px; font-size: 15px; }
+  /* 이름이 길어도 줄바꿈하지 않는다 — 두 줄이 되면 줄 높이가 들쭉날쭉해지고
+     8개가 차면 하단 브랜드가 화면 밖으로 밀린다(2026-08-17 사용자 스크린샷) */
+  .recent-item .rn { font-weight: 600;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .recent-item .ra { color: var(--muted); font-size: 12px; margin-top: 2px;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .recent-item > button.del { flex: none; border: none; background: none;
@@ -130,10 +133,12 @@
      클래스명에 a- 를 붙인다: 그냥 .apple/.tmap 을 쓰면 위쪽 '내비 버튼'의
      같은 이름 규칙(.apple{background:#F2F2F4})이 배지에도 먹어서 흰 바탕에
      흰 글씨가 된다(2026-08-17 실측 — Apple 배지가 흰 점처럼 보이던 원인). */
-  .recent-badges { flex: none; display: flex; flex-wrap: wrap; gap: 4px;
-    justify-content: flex-end; max-width: 58%; }
-  .recent-badges .app { font-size: 11px; font-weight: 600; white-space: nowrap;
-    border-radius: 999px; padding: 4px 9px; border: 1px solid var(--line);
+  .recent-badges { flex: none; display: flex; flex-wrap: wrap; gap: 3px;
+    justify-content: flex-end; max-width: 62%; }
+  /* 배지를 작게 유지해야 한 줄에 들어간다 — 두 줄로 접히면 그 줄만 높아져
+     8개가 찼을 때 하단 브랜드가 밀린다 */
+  .recent-badges .app { font-size: 10px; font-weight: 600; white-space: nowrap;
+    border-radius: 999px; padding: 3px 7px; border: 1px solid var(--line);
     background: transparent; color: var(--muted); }
   .recent-badges .app.a-tmap     { color: #2B7BFF; border-color: #0264FB66; background: #0264FB1a; }
   .recent-badges .app.a-naver    { color: #14B85F; border-color: #03C75A66; background: #03C75A1a; }
@@ -157,13 +162,13 @@
   .empty-title { font-size: 19px; font-weight: 700; margin: 0 0 6px; }
   .empty-sub { font-size: 14px; line-height: 1.7; color: var(--muted); margin: 0; }
   /* ── FURYCLASSIC 브랜드 서명 ── */
-  .brand { margin-top: 40px; padding-top: 22px; text-align: center; }
+  .brand { margin-top: 22px; padding-top: 14px; text-align: center; }
   /* 레이싱 레드 스피드컷 — 기울여서 워드마크의 이탤릭과 각을 맞춘다 */
-  .brand-cut { display: block; width: 54px; height: 4px; margin: 0 auto 16px;
+  .brand-cut { display: block; width: 54px; height: 4px; margin: 0 auto 13px;
     background: #E10600; transform: skewX(-18deg); border-radius: 1px; }
   .wordmark { display: block; width: min(210px, 62%); height: auto; margin: 0 auto;
     color: var(--text); }
-  .brand-slogan { margin: 12px 0 0; font-size: 9px; letter-spacing: .22em;
+  .brand-slogan { margin: 10px 0 0; font-size: 9px; letter-spacing: .22em;
     color: var(--muted); text-transform: uppercase; }
   @media (prefers-color-scheme: dark) { .brand-slogan { opacity: .85; } }
 </style>
