@@ -14,7 +14,10 @@
   }
   :root[data-theme="dark"] { --bg: #16181C; --card: #1F2328; --text: #ECEEF0; --muted: #9AA3AD; --line: #2E343B; }
   :root[data-theme="light"] { --bg: #F6F7F9; --card: #FFFFFF; --text: #1A1D21; --muted: #6B7280; --line: #E5E8EC; }
+  *, *::before, *::after { box-sizing: border-box; }
   html, body { margin: 0; background: var(--bg); color: var(--text);
+    /* 가로 넘침이 생기면 아이폰에서 가운데 정렬이 풀린 것처럼 보인다 */
+    overflow-x: hidden;
     font-family: "Apple SD Gothic Neo", Pretendard, -apple-system, sans-serif; }
   .wrap { max-width: 420px; margin: 0 auto; padding: 28px 20px 40px; }
   .eyebrow { font-size: 12px; letter-spacing: .12em; color: var(--muted); text-transform: uppercase; }
@@ -43,11 +46,17 @@
   /* 검색은 맨 위 — 아래 목적지 영역과 구분선으로 갈라 준다(2026-08-16 사용자 지정) */
   .search { margin: 0 0 20px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
   .search-row { display: flex; gap: 8px; }
-  .search-row input { flex: 1; height: 44px; border-radius: 10px; border: 1px solid var(--line);
-    background: var(--card); color: var(--text); font-size: 15px; padding: 0 12px; }
+  /* font-size 는 반드시 16px 이상 — iOS Safari 는 16px 미만 입력창을 탭하면
+     페이지를 자동 확대해 버린다. 확대되면 가운데 정렬이 풀리고 오른쪽이
+     잘려 나간다(2026-08-17 아이폰에서 확인). min-width:0 은 flex 아이템의
+     기본 min-width:auto 때문에 입력창이 안 줄어들어 생기는 가로 넘침 방지. */
+  .search-row input { flex: 1; min-width: 0; height: 44px; border-radius: 10px;
+    border: 1px solid var(--line); background: var(--card); color: var(--text);
+    font-size: 16px; padding: 0 12px; }
   .search-row input:focus-visible { outline: 3px solid var(--accent); outline-offset: 1px; }
-  .search-row button { height: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid var(--line);
-    background: var(--accent); color: #fff; font-size: 15px; font-weight: 600; }
+  .search-row button { flex: none; height: 44px; padding: 0 16px; border-radius: 10px;
+    border: 1px solid var(--line); background: var(--accent); color: #fff;
+    font-size: 16px; font-weight: 600; }
   .search-hint { font-size: 12px; color: var(--muted); margin: 6px 2px 0; }
   .search-results { margin-top: 10px; border: 1px solid var(--line); border-radius: 10px;
     overflow: hidden; display: none; }
