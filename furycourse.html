@@ -125,12 +125,14 @@ h1 small{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.02em;
   padding:12px 6px;border-radius:9px;border:1px solid var(--line);cursor:pointer;
   background:var(--surface);color:var(--fg);font-family:var(--sans);
 }
-.n-tmap{background:#0264FB;color:#fff;border-color:#0257D8}
-.n-naver{background:#03C75A;color:#fff;border-color:#02AD4E}
-.n-kakao{background:#FEE500;color:#191600;border-color:#E6CE00}
-.n-kmap{background:#E08A52;color:#1A1D21;border-color:#C97740}
-.n-apple{background:#F2F2F4;color:#111;border-color:#DCDCE0}
-.n-google{background:#fff;color:#111;border-color:#DADCE0}
+/* .btns a 가 (0,1,1) 이라 .n-tmap (0,1,0) 을 이겨버린다 — 반드시 .btns 를 앞에 붙일 것.
+   색상은 길안내 런처(index.html)와 동일하게 맞춘다. */
+.btns .n-tmap  {background:#0264FB;color:#fff;border-color:#0257D8}
+.btns .n-naver {background:#03C75A;color:#fff;border-color:#02AD4E}
+.btns .n-kakao {background:#FAE100;color:#191600;border-color:#E8D100}
+.btns .n-kmap  {background:#E08A52;color:#1A1D21;border-color:#C97740}
+.btns .n-apple {background:#F2F2F4;color:#1D1D1F;border-color:#D6D6DB}
+.btns .n-google{background:#8A8078;color:#1A1D21;border-color:#736A63}
 .empty{padding:44px 0;text-align:center;color:var(--fg3);font-size:14px}
 .note{font-size:12px;color:var(--fg3);line-height:1.65;margin:18px 0 0}
 .brand{margin:26px 0 0;display:flex;flex-direction:column;align-items:center;gap:5px;color:var(--fg3)}
