@@ -71,10 +71,20 @@
     border: 1px solid var(--line); background: var(--card); color: var(--text);
     font-size: 16px; padding: 0 12px; -webkit-appearance: none; appearance: none; }
   .search-row input:focus-visible { outline: 3px solid var(--accent); outline-offset: 1px; }
-  .search-meta { display: flex; align-items: baseline; gap: 10px; margin: 7px 2px 0; }
-  .search-hint { font-size: 12px; color: var(--muted); margin: 0; flex: 1; }
-  .homebtn { flex: none; border: 1px solid var(--line); background: var(--card);
-    color: var(--text); font-size: 12px; border-radius: 999px; padding: 5px 12px; }
+  .search-hint { font-size: 12px; color: var(--muted); margin: 8px 2px 0; }
+  /* 집·사무실·처음으로 아이콘 바 */
+  .quickbar { display: flex; gap: 8px; margin-top: 10px; }
+  .chip { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;
+    padding: 10px 4px; border: 1px solid var(--line); border-radius: 12px;
+    background: var(--card); color: var(--text); font-size: 11px; line-height: 1; }
+  .chip svg { width: 21px; height: 21px; fill: none; stroke: currentColor;
+    stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  /* 아직 등록 안 된 집·사무실은 점선+흐리게 — 눌러야 할 게 남았다는 신호 */
+  .chip.unset { color: var(--muted); border-style: dashed; }
+  .savebar { display: flex; gap: 8px; margin-top: 14px; }
+  .savebar button { flex: 1; height: 38px; border-radius: 10px; font-size: 13px;
+    border: 1px solid var(--line); background: var(--card); color: var(--text); }
+  .savebar button.on { border-color: var(--accent); color: var(--accent); }
   /* 최근 검색 */
   .recent { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
   .recent-head { display: flex; align-items: center; justify-content: space-between;
@@ -97,6 +107,10 @@
     font-size: 14px; line-height: 1.4; }
   .search-results button:last-child { border-bottom: none; }
   .search-results button:hover, .search-results button:focus-visible { background: var(--bg); }
+  .search-results a.maplink { display: block; padding: 12px 14px; font-size: 14px;
+    background: var(--bg); color: var(--accent); text-decoration: none;
+    border-bottom: 1px solid var(--line); }
+  .search-results a.maplink:last-child { border-bottom: none; }
   .search-results .rname { font-weight: 700; }
   .search-results .raddr { color: var(--muted); font-size: 12px; margin-top: 2px; }
   .search-status { font-size: 13px; color: var(--muted); margin-top: 8px; }
@@ -118,10 +132,22 @@
         autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
         enterkeyhint="search">
     </div>
-    <div class="search-meta">
-      <p class="search-hint" id="searchHint">검색해서 고르면 아래 목적지가 그 장소로 바뀝니다.</p>
-      <button class="homebtn" id="homeBtn" type="button" hidden>처음으로</button>
+    <!-- 집·사무실 바로가기 + 처음으로 (아이콘) -->
+    <div class="quickbar">
+      <button class="chip" id="chipHome" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>
+        <span>집</span>
+      </button>
+      <button class="chip" id="chipOffice" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21V4h11v17"/><path d="M15 10h5v11"/><path d="M2 21h20"/><path d="M7.5 8h1M11 8h1M7.5 12h1M11 12h1M7.5 16h1M11 16h1"/></svg>
+        <span>사무실</span>
+      </button>
+      <button class="chip" id="chipReset" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.9 13.4A8 8 0 1 1 18 7.1"/><path d="M18.7 3.1v4.5h-4.5"/></svg>
+        <span>처음으로</span>
+      </button>
     </div>
+    <p class="search-hint" id="searchHint">검색해서 고르면 아래 목적지가 그 장소로 바뀝니다.</p>
     <p class="search-status" id="searchStatus"></p>
     <div class="search-results" id="searchResults"></div>
 
@@ -144,6 +170,12 @@
     <div class="notice" id="notice"></div>
     <div class="btns" id="btns"></div>
     <p class="resolved" id="resolved"></p>
+
+    <!-- 지금 목적지를 집/사무실로 등록. 별도 등록 화면 없이 쓰던 흐름에서 바로 저장된다. -->
+    <div class="savebar" id="saveBar" hidden>
+      <button type="button" id="saveHome"></button>
+      <button type="button" id="saveOffice"></button>
+    </div>
 
     <p class="note">버튼을 누르면 해당 내비 앱이 목적지가 설정된 상태로 실행됩니다.
       앱이 설치돼 있지 않으면 반응이 없을 수 있어요.</p>
@@ -358,16 +390,100 @@
     renderRecent();
   });
 
-  // 목적지 확정 — 검색 결과·최근 검색 양쪽에서 공통으로 쓴다
+  // ---------------- 집 · 사무실 ----------------
+  // 등록은 별도 화면 없이 '검색해서 고른 목적지'를 그대로 저장하는 방식이다
+  // (목적지 화면의 '집으로 저장' 버튼). 최근 검색과 같은 형태로 보관한다.
+  const SAVED_KEYS = { home: 'navi.place.home', office: 'navi.place.office' };
+  const SAVED_LABEL = { home: '집', office: '사무실' };
+  // 조사: 받침 없거나 ㄹ 받침이면 '로', 그 외는 '으로' (사무실'로', 집'으로')
+  const SAVED_TO = { home: '집으로', office: '사무실로' };
+
+  // 이름 뒤 목적격 조사 을/를 — 한글이 아니면 안전하게 '을(를)'
+  function objParticle(w) {
+    const c = (w || '').charCodeAt((w || '').length - 1);
+    if (!(c >= 0xAC00 && c <= 0xD7A3)) return '을(를)';
+    return (c - 0xAC00) % 28 ? '을' : '를';
+  }
+
+  function loadSaved(kind) {
+    try {
+      const v = JSON.parse(localStorage.getItem(SAVED_KEYS[kind]));
+      return (v && v.name && isFinite(v.la) && isFinite(v.lo)) ? v : null;
+    } catch (_) { return null; }
+  }
+  function setSaved(kind, item) {
+    try {
+      if (item) localStorage.setItem(SAVED_KEYS[kind], JSON.stringify(item));
+      else localStorage.removeItem(SAVED_KEYS[kind]);
+    } catch (_) { /* 저장 못 해도 나머지는 계속 동작 */ }
+  }
+
+  // 지금 화면에 떠 있는 목적지 (좌표가 있을 때만)
+  let currentDest = null;
+
+  function sameSpot(a, b) {
+    return !!a && !!b && a.name === b.name
+      && Math.abs(a.la - b.la) < 1e-4 && Math.abs(a.lo - b.lo) < 1e-4;
+  }
+
+  const chipHome = document.getElementById('chipHome');
+  const chipOffice = document.getElementById('chipOffice');
+  const saveBar = document.getElementById('saveBar');
+  const saveHomeBtn = document.getElementById('saveHome');
+  const saveOfficeBtn = document.getElementById('saveOffice');
+
+  function renderQuickbar() {
+    chipHome.classList.toggle('unset', !loadSaved('home'));
+    chipOffice.classList.toggle('unset', !loadSaved('office'));
+  }
+
+  function renderSaveBar() {
+    if (!currentDest) { saveBar.hidden = true; return; }
+    saveBar.hidden = false;
+    [['home', saveHomeBtn], ['office', saveOfficeBtn]].forEach(([kind, btn]) => {
+      const on = sameSpot(loadSaved(kind), currentDest);
+      btn.textContent = on ? `${SAVED_LABEL[kind]} 등록됨 · 해제`
+                           : `${SAVED_TO[kind]} 저장`;
+      btn.classList.toggle('on', on);
+    });
+  }
+
+  [['home', saveHomeBtn], ['office', saveOfficeBtn]].forEach(([kind, btn]) => {
+    btn.addEventListener('click', () => {
+      if (!currentDest) return;
+      const on = sameSpot(loadSaved(kind), currentDest);
+      setSaved(kind, on ? null : currentDest);
+      searchStatus.textContent = on
+        ? `${SAVED_LABEL[kind]} 등록을 해제했습니다.`
+        : `'${currentDest.name}'${objParticle(currentDest.name)} ${SAVED_TO[kind]} 저장했습니다.`;
+      renderQuickbar();
+      renderSaveBar();
+    });
+  });
+
+  [['home', chipHome], ['office', chipOffice]].forEach(([kind, chip]) => {
+    chip.addEventListener('click', () => {
+      const saved = loadSaved(kind);
+      if (saved) { chooseDestination(saved.name, saved.la, saved.lo, saved.addr || ''); return; }
+      // 미등록이면 등록 방법을 알려 주고 검색으로 유도한다
+      searchStatus.textContent =
+        `${SAVED_LABEL[kind]}이 아직 없습니다. 장소를 검색해 고른 뒤 '${SAVED_TO[kind]} 저장'을 누르세요.`;
+      searchInput.focus();
+    });
+  });
+
+  // 목적지 확정 — 검색 결과·최근 검색·집/사무실 모두 여기로 모인다
   function chooseDestination(placeName, placeLa, placeLo, placeAddr) {
     renderNav(placeName, placeLa, placeLo, placeAddr);
-    pushRecent({ name: placeName, la: +placeLa, lo: +placeLo, addr: placeAddr || '' });
+    const item = { name: placeName, la: +placeLa, lo: +placeLo, addr: placeAddr || '' };
+    currentDest = isFinite(item.la) && isFinite(item.lo) ? item : null;
+    pushRecent(item);
     clearResults();
     recentBox.hidden = true;
     searchStatus.textContent = '';
     searchInput.value = '';
     searchInput.blur();                 // 키보드 내려서 버튼이 가려지지 않게
-    updateHomeBtn();
+    renderSaveBar();
     document.getElementById('place').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
@@ -415,13 +531,34 @@
       searchResults.classList.add('show');
       searchStatus.textContent = '';
     } else {
-      searchStatus.textContent = `'${q}' 검색 결과가 없습니다.`;
+      // 0건일 때만 지도앱으로 넘겨준다. Nominatim(OSM)에는 '인천혼다' 같은
+      // 국내 소상공인 상호가 대부분 없어서, 이게 없으면 막다른 길이 된다.
+      searchStatus.textContent = `'${q}' 좌표를 못 찾았습니다 — 지도앱에서 열어 보세요.`;
+      appendMapAppLinks(q);
     }
+  }
+
+  // 지도앱 바로 검색 링크 (검색 결과 0건일 때만 사용).
+  // 브라우저에서 카카오 지도 검색 API 는 CORS 로 막혀 직접 못 부른다.
+  function appendMapAppLinks(q) {
+    const encQ = encodeURIComponent(q);
+    [
+      ['카카오맵', `https://map.kakao.com/link/search/${encQ}`],
+      ['네이버지도', `https://map.naver.com/p/search/${encQ}`],
+      ['T맵', `tmap://search?name=${encQ}`],
+      ['구글지도', `https://www.google.com/maps/search/?api=1&query=${encQ}`],
+    ].forEach(([label, href]) => {
+      const a = document.createElement('a');
+      a.href = href;
+      a.className = 'maplink';
+      a.textContent = `${label}에서 '${q}' 검색`;
+      searchResults.appendChild(a);
+    });
+    searchResults.classList.add('show');
   }
 
   function onInput() {
     const q = searchInput.value.trim();
-    updateHomeBtn();
     clearTimeout(debounceTimer);
     if (q.length < MIN_CHARS) {
       searchSeq++;                      // 진행 중이던 검색 결과가 뒤늦게 붙는 것 방지
@@ -447,16 +584,6 @@
   });
 
   // ---------------- 처음으로(초기화) ----------------
-  const homeBtn = document.getElementById('homeBtn');
-
-  // 초기화할 게 있을 때만 버튼을 띄운다.
-  function updateHomeBtn() {
-    const dirty = !!searchInput.value.trim()
-      || (!hasDest && !document.getElementById('dest').hidden)   // 앱 모드에서 목적지를 고른 상태
-      || (hasDest && document.getElementById('place').textContent !== name); // 링크 장소를 바꾼 상태
-    homeBtn.hidden = !dirty;
-  }
-
   function goHome() {
     clearTimeout(debounceTimer);
     searchSeq++;
@@ -466,17 +593,20 @@
     if (hasDest) {
       // 링크로 열린 경우엔 링크의 원래 목적지로 되돌린다(앱 초기화와 구분)
       renderNav(name, la, lo, addr);
+      currentDest = (isFinite(la) && isFinite(lo))
+        ? { name, la: +la, lo: +lo, addr: addr || '' } : null;
     } else {
       document.getElementById('dest').hidden = true;
       document.getElementById('empty').hidden = false;
       document.title = '길안내';
+      currentDest = null;
     }
     renderRecent();
-    updateHomeBtn();
+    renderSaveBar();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  homeBtn.addEventListener('click', goHome);
+  document.getElementById('chipReset').addEventListener('click', goHome);
 
   // 앱 모드에서 내비 앱에 다녀오면(백그라운드 후 복귀) 첫 화면으로 되돌린다.
   // 링크로 연 경우는 약속 장소를 유지해야 하므로 건드리지 않는다.
@@ -497,7 +627,13 @@
   } else if (!hasDest) {
     renderRecent();
   }
-  updateHomeBtn();
+
+  // 링크로 열려 좌표까지 있는 경우엔 그 장소를 집/사무실로 저장할 수 있게 해 둔다
+  if (hasDest && isFinite(la) && isFinite(lo)) {
+    currentDest = { name, la: +la, lo: +lo, addr: addr || '' };
+  }
+  renderQuickbar();
+  renderSaveBar();
 </script>
 
 </body>
