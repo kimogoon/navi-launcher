@@ -117,6 +117,15 @@
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .recent-item > button.del { flex: none; border: none; background: none;
     color: var(--muted); font-size: 18px; line-height: 1; padding: 8px 6px; }
+  /* 상단 고정 토글 — 켜지면 강조색으로 채워진다 */
+  .recent-item > button.pin { flex: none; border: none; background: none;
+    color: var(--muted); padding: 8px 4px; line-height: 0; }
+  .recent-item > button.pin svg { width: 17px; height: 17px; fill: none;
+    stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  .recent-item > button.pin.on { color: var(--accent); }
+  .recent-item > button.pin.on svg { fill: var(--accent); }
+  /* 고정된 줄은 살짝 강조해 위쪽 묶음이라는 걸 알 수 있게 */
+  .recent-item.pinned .rn { color: var(--accent); }
   /* 어떤 내비로 실행했는지 배지 — 각 앱 색을 옅게 깔아 한눈에 구분되게.
      클래스명에 a- 를 붙인다: 그냥 .apple/.tmap 을 쓰면 위쪽 '내비 버튼'의
      같은 이름 규칙(.apple{background:#F2F2F4})이 배지에도 먹어서 흰 바탕에
@@ -144,10 +153,19 @@
   .search-results .raddr { color: var(--muted); font-size: 12px; margin-top: 2px; }
   .search-status { font-size: 13px; color: var(--muted); margin-top: 8px; }
   /* 홈 화면 아이콘으로 열었을 때(목적지 없음) 보여 주는 빈 화면 */
-  .empty { text-align: center; padding: 44px 8px 20px; }
-  .empty-mark { font-size: 44px; line-height: 1; }
-  .empty-title { font-size: 19px; font-weight: 700; margin: 14px 0 6px; }
+  .empty { text-align: center; padding: 34px 8px 8px; }
+  .empty-title { font-size: 19px; font-weight: 700; margin: 0 0 6px; }
   .empty-sub { font-size: 14px; line-height: 1.7; color: var(--muted); margin: 0; }
+  /* ── FURYCLASSIC 브랜드 서명 ── */
+  .brand { margin-top: 40px; padding-top: 22px; text-align: center; }
+  /* 레이싱 레드 스피드컷 — 기울여서 워드마크의 이탤릭과 각을 맞춘다 */
+  .brand-cut { display: block; width: 54px; height: 4px; margin: 0 auto 16px;
+    background: #E10600; transform: skewX(-18deg); border-radius: 1px; }
+  .wordmark { display: block; width: min(210px, 62%); height: auto; margin: 0 auto;
+    color: var(--text); }
+  .brand-slogan { margin: 12px 0 0; font-size: 9px; letter-spacing: .22em;
+    color: var(--muted); text-transform: uppercase; }
+  @media (prefers-color-scheme: dark) { .brand-slogan { opacity: .85; } }
 </style>
 </head>
 <body>
@@ -224,9 +242,16 @@
   </div>
 
   <div class="empty" id="empty" hidden>
-    <div class="empty-mark">🧭</div>
     <p class="empty-title">어디로 갈까요?</p>
     <p class="empty-sub">위에서 지명이나 주소를 검색하면<br>T맵·네이버지도·카카오내비로 바로 안내를 시작합니다.</p>
+  </div>
+
+  <!-- 브랜드 서명. 워드마크는 Montserrat Black Italic 을 패스로 변환해 넣었다
+       (폰트 설치 여부와 무관하게 항상 같은 모양). currentColor 라 다크/라이트 자동 대응. -->
+  <div class="brand">
+    <span class="brand-cut" aria-hidden="true"></span>
+    <svg class="wordmark" viewBox="0 0 7550 732" role="img" aria-label="FURYCLASSIC"><g transform="translate(-2,716) scale(1,-1)" fill="currentColor"><path transform="translate(0,0)" d="M342 522 318 402H610L574 224H283L238 0H2L142 700H711L675 522Z"/><path transform="translate(650,0)" d="M51 241Q51 273 59 315L136 700H372L296 319Q290 291 290 268Q290 221 314.0 198.0Q338 175 384 175Q436 175 465.0 208.0Q494 241 510 319L586 700H818L739 305Q707 146 611.0 65.0Q515 -16 355 -16Q261 -16 192.5 15.5Q124 47 87.5 105.0Q51 163 51 241Z"/><path transform="translate(1440,0)" d="M558 204 675 0H430L331 176H273L238 0H2L142 700H456Q594 700 670.5 639.5Q747 579 747 470Q747 377 697.5 307.5Q648 238 558 204ZM420 518H341L308 354H405Q454 354 481.0 378.5Q508 403 508 447Q508 518 420 518Z"/><path transform="translate(2191,0)" d="M468 254 418 0H182L233 257L58 700H295L390 458L585 700H822Z"/><path transform="translate(2907,0)" d="M41 297Q41 419 97.5 514.0Q154 609 254.5 662.5Q355 716 483 716Q584 716 662.0 679.5Q740 643 778 576L608 443Q561 525 468 525Q413 525 370.0 498.0Q327 471 303.0 422.5Q279 374 279 312Q279 250 318.5 212.5Q358 175 423 175Q512 175 579 256L718 123Q657 48 579.5 16.0Q502 -16 400 -16Q293 -16 211.5 23.5Q130 63 85.5 134.0Q41 205 41 297Z"/><path transform="translate(3657,0)" d="M142 700H378L275 183H591L554 0H2Z"/><path transform="translate(4280,0)" d="M512 122H245L175 0H-74L372 700H604L770 0H535ZM479 292 445 471 342 292Z"/><path transform="translate(5092,0)" d="M-23 55 68 229Q181 164 304 164Q349 164 373.0 175.0Q397 186 397 205Q397 223 372.5 234.0Q348 245 295 258Q225 276 179.0 294.5Q133 313 98.5 351.5Q64 390 64 453Q64 532 106.5 591.5Q149 651 229.0 683.5Q309 716 418 716Q496 716 563.5 700.5Q631 685 680 656L595 484Q554 510 504.5 523.0Q455 536 403 536Q354 536 327.0 522.0Q300 508 300 489Q300 470 324.5 459.0Q349 448 405 435Q473 419 519.5 401.0Q566 383 600.0 345.0Q634 307 634 245Q634 167 591.0 108.0Q548 49 468.0 16.5Q388 -16 280 -16Q189 -16 109.0 3.5Q29 23 -23 55Z"/><path transform="translate(5755,0)" d="M-23 55 68 229Q181 164 304 164Q349 164 373.0 175.0Q397 186 397 205Q397 223 372.5 234.0Q348 245 295 258Q225 276 179.0 294.5Q133 313 98.5 351.5Q64 390 64 453Q64 532 106.5 591.5Q149 651 229.0 683.5Q309 716 418 716Q496 716 563.5 700.5Q631 685 680 656L595 484Q554 510 504.5 523.0Q455 536 403 536Q354 536 327.0 522.0Q300 508 300 489Q300 470 324.5 459.0Q349 448 405 435Q473 419 519.5 401.0Q566 383 600.0 345.0Q634 307 634 245Q634 167 591.0 108.0Q548 49 468.0 16.5Q388 -16 280 -16Q189 -16 109.0 3.5Q29 23 -23 55Z"/><path transform="translate(6418,0)" d="M142 700H378L238 0H2Z"/><path transform="translate(6774,0)" d="M41 297Q41 419 97.5 514.0Q154 609 254.5 662.5Q355 716 483 716Q584 716 662.0 679.5Q740 643 778 576L608 443Q561 525 468 525Q413 525 370.0 498.0Q327 471 303.0 422.5Q279 374 279 312Q279 250 318.5 212.5Q358 175 423 175Q512 175 579 256L718 123Q657 48 579.5 16.0Q502 -16 400 -16Q293 -16 211.5 23.5Q130 63 85.5 134.0Q41 205 41 297Z"/></g></svg>
+    <p class="brand-slogan">WHERE YOU STAND BECOMES THE STUDIO</p>
   </div>
 </div>
 <script>
@@ -349,7 +374,7 @@
   } else {
     // 홈 화면 아이콘 실행 — 목적지 없이 검색 전용으로 시작
     document.getElementById('dest').hidden = true;
-    document.getElementById('empty').hidden = false;
+    showEmpty();
     document.querySelector('.search-hint').textContent =
       '지명·주소를 검색해 고르면 바로 안내가 시작됩니다.';
     document.getElementById('searchInput').placeholder = '지명·주소 검색';
@@ -403,22 +428,36 @@
       // 손으로 넣은 값이 그대로 다 그려진다.
       // apps 는 '이 장소를 어떤 앱들로 실행했는지' 목록. 예전 버전은 마지막
       // 하나만 app 문자열로 저장했으므로 읽을 때 배열로 올려 준다.
-      return Array.isArray(v) ? v.filter(r => r && r.name).map(r => ({
+      if (!Array.isArray(v)) return [];
+      const all = v.filter(r => r && r.name).map(r => ({
         ...r,
         apps: Array.isArray(r.apps) ? r.apps : (r.app ? [r.app] : []),
-      })).slice(0, RECENT_MAX) : [];
+        pinned: !!r.pinned,
+        ts: Number(r.ts) || 0,
+      }));
+      // 고정은 위로, 나머지는 '마지막으로 쓴 시각' 순. 제한은 고정 안 된 것에만.
+      // ts 가 없으면(예전 데이터) 0 이라 자연히 뒤로 간다.
+      // 시각으로 정렬해야 고정을 해제했을 때 원래 자리로 돌아간다 — 배열 순서만
+      // 쓰면 해제해도 맨 위에 그대로 남는다.
+      return [...all.filter(r => r.pinned),
+              ...all.filter(r => !r.pinned).sort((a, b) => b.ts - a.ts).slice(0, RECENT_MAX)];
     } catch (_) { return []; }          // 사파리 프라이빗 모드 등에서 접근 거부될 수 있다
   }
+  // 고정한 항목은 항상 위, 그리고 개수 제한에서 제외한다.
+  // 제한은 고정 안 된 항목에만 걸어야 '고정해 뒀는데 밀려나는' 일이 없다.
   function saveRecent(list) {
-    try { localStorage.setItem(RECENT_KEY, JSON.stringify(list.slice(0, RECENT_MAX))); }
+    const pinned = list.filter(r => r.pinned);
+    const rest = list.filter(r => !r.pinned).slice(0, RECENT_MAX);
+    try { localStorage.setItem(RECENT_KEY, JSON.stringify([...pinned, ...rest])); }
     catch (_) { /* 저장 실패해도 검색 자체는 계속 되게 둔다 */ }
   }
   function pushRecent(item) {
     const prev = loadRecent();
     const k = recentKey(item);
     const old = prev.find(r => recentKey(r) === k);
-    // 같은 곳을 다시 고르면 예전에 어떤 앱들로 갔는지는 살려 둔다
-    const merged = { ...item, apps: (old && old.apps) || item.apps || [] };
+    // 같은 곳을 다시 고르면 예전 앱 기록과 고정 여부는 살려 둔다
+    const merged = { ...item, apps: (old && old.apps) || item.apps || [],
+                     pinned: !!(old && old.pinned), ts: Date.now() };
     const list = prev.filter(r => recentKey(r) !== k);
     list.unshift(merged);
     saveRecent(list);
@@ -437,7 +476,7 @@
     const entry = i >= 0 ? list.splice(i, 1)[0] : { ...currentDest, apps: [] };
     const apps = Array.isArray(entry.apps) ? entry.apps.slice() : [];
     if (!apps.includes(cls)) apps.push(cls);    // 쓴 순서대로 쌓는다
-    list.unshift({ ...entry, apps });           // 최근 쓴 곳을 맨 위로
+    list.unshift({ ...entry, apps, ts: Date.now() });   // 최근 쓴 곳을 맨 위로
     saveRecent(list);
     renderRecent();
   }
@@ -445,10 +484,11 @@
   function renderRecent() {
     const list = loadRecent();
     recentList.innerHTML = '';
-    if (!list.length) { recentBox.hidden = true; return; }
+    // 목록이 바뀔 때마다 안내 노출 여부도 같이 맞춘다(삭제로 비었을 때 등)
+    if (!list.length) { recentBox.hidden = true; showEmpty(); return; }
     list.forEach(r => {
       const row = document.createElement('div');
-      row.className = 'recent-item';
+      row.className = 'recent-item' + (r.pinned ? ' pinned' : '');
 
       const pick = document.createElement('button');
       pick.type = 'button';
@@ -471,6 +511,25 @@
       });
       if (!badges.children.length) badges.hidden = true;
 
+      // 상단 고정 토글 — 켜면 목록 위에 붙어 있고 개수 제한에도 안 밀린다
+      const pin = document.createElement('button');
+      pin.type = 'button';
+      pin.className = 'pin' + (r.pinned ? ' on' : '');
+      pin.setAttribute('aria-pressed', r.pinned ? 'true' : 'false');
+      pin.setAttribute('aria-label', `${r.name} ${r.pinned ? '고정 해제' : '상단 고정'}`);
+      pin.innerHTML =
+        '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+        '<path d="M9.5 3h5l-.7 5.2 3.2 3.1H6l3.2-3.1z"/><path d="M12 11.3V21"/></svg>';
+      pin.addEventListener('click', () => {
+        const list = loadRecent();
+        const i = list.findIndex(x => recentKey(x) === recentKey(r));
+        if (i >= 0) {
+          list[i] = { ...list[i], pinned: !list[i].pinned };
+          saveRecent(list);
+          renderRecent();
+        }
+      });
+
       const del = document.createElement('button');
       del.type = 'button';
       del.className = 'del';
@@ -481,10 +540,19 @@
         renderRecent();
       });
 
-      row.append(pick, badges, del);
+      row.append(pick, badges, pin, del);
       recentList.appendChild(row);
     });
     recentBox.hidden = false;
+  }
+
+  // 빈 화면 안내는 '처음 쓰는 사람'에게만 의미가 있다. 최근 검색이 쌓였으면
+  // 이미 쓰는 법을 아는 것이므로 감추고, 브랜드 서명만 남긴다.
+  function showEmpty() {
+    // 목적지를 보고 있는 중이면 안내는 무조건 감춘다
+    const destShown = !document.getElementById('dest').hidden;
+    const first = loadRecent().length === 0;
+    document.getElementById('empty').hidden = destShown || !first;
   }
 
   document.getElementById('recentClear').addEventListener('click', () => {
@@ -770,7 +838,7 @@
       currentDest = { name, la: num(la), lo: num(lo), addr: addr || '' };
     } else {
       document.getElementById('dest').hidden = true;
-      document.getElementById('empty').hidden = false;
+      showEmpty();
       document.title = '길안내';
       currentDest = null;
     }
