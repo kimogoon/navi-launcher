@@ -15,6 +15,9 @@
   --keep:#12795A; --keep-bg:#E4F2EC;
   --fuel:#1F5FA8; --fuel-bg:#E5EEF9;
   --warn:#8A6100; --warn-bg:#FBF0D8;
+  /* 활성 상태는 배경 대비로만 판단하면 다크에서 뒤집힌다(--ink 가 배경보다 어두움).
+     테마마다 '배경의 반대쪽'을 명시해 어느 쪽에서도 확실히 튀게 한다. */
+  --on-bg:#101014; --on-fg:#FFFFFF;
   --sans:-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]){
@@ -24,6 +27,7 @@
   --keep:#4FD1A5; --keep-bg:#0F2D24;
   --fuel:#7FB4EE; --fuel-bg:#12233A;
   --warn:#E5B04A; --warn-bg:#2E2412;
+  --on-bg:#F2F0F4; --on-fg:#101014;
 }}
 :root[data-theme=dark]{
   --bg:#0C0C0F; --surface:#16161B; --raised:#1D1D23;
@@ -32,6 +36,7 @@
   --keep:#4FD1A5; --keep-bg:#0F2D24;
   --fuel:#7FB4EE; --fuel-bg:#12233A;
   --warn:#E5B04A; --warn-bg:#2E2412;
+  --on-bg:#F2F0F4; --on-fg:#101014;
 }
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--fg)}
@@ -67,7 +72,13 @@ h1 small{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.02em;
   font:600 13px/1 var(--sans);padding:8px 12px;border-radius:999px;cursor:pointer;
   border:1px solid var(--line);background:var(--surface);color:var(--fg2);
 }
-.seg button[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
+.seg button[aria-pressed=true]{background:var(--on-bg);border-color:var(--on-bg);color:var(--on-fg)}
+.seg button[aria-pressed=true] .n{opacity:.7}
+/* 카페/정비 전환은 이 앱의 가장 큰 갈림길이라 브랜드 레드로 따로 뺀다 */
+#modeSeg button[aria-pressed=true]{
+  background:var(--red);border-color:var(--red);color:#fff;
+  box-shadow:0 2px 10px -3px rgba(225,6,0,.65)
+}
 .seg .n{opacity:.55;margin-left:4px;font-variant-numeric:tabular-nums}
 .crumbs{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px;font-size:13px;color:var(--fg3)}
 .crumbs button{
@@ -188,7 +199,7 @@ h1 small{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.02em;
 .nearbar.on{display:flex}
 .nearbar button{flex:1;font:600 12.5px/1 var(--sans);padding:9px 6px;border-radius:9px;
   cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--fg2)}
-.nearbar button[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
+.nearbar button[aria-pressed=true]{background:var(--on-bg);border-color:var(--on-bg);color:var(--on-fg)}
 .quickbar{display:flex;gap:8px;margin:0 0 10px}
 .qchip{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;
   padding:10px 4px;border:1px solid var(--line);border-radius:12px;cursor:pointer;
@@ -196,7 +207,8 @@ h1 small{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.02em;
 .qchip svg{width:21px;height:21px;fill:none;stroke:currentColor;
   stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .qchip:active{background:var(--raised)}
-.qchip[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
+.qchip[aria-pressed=true]{background:var(--red);border-color:var(--red);color:#fff;
+  box-shadow:0 2px 10px -3px rgba(225,6,0,.65)}
 .qchip.busy{opacity:.6}
 .recent-wrap{margin-bottom:10px}
 .recent-wrap h2{font:700 11px/1 var(--sans);letter-spacing:.13em;color:var(--fg3);
