@@ -34,7 +34,12 @@
     font-family: "Apple SD Gothic Neo", Pretendard, -apple-system, sans-serif; }
   /* safe-area: 홈 화면에 추가해 전체화면으로 뜰 때 노치·홈바를 피한다.
      Safari 로 볼 때는 env() 가 0 이라 기존 여백 그대로다. */
+  /* 세로 플렉스로 두고 아래 .brand 에 margin auto 를 줘서, 남는 공간을
+     로고 위아래로 균등하게 나눈다(= 로고가 빈 공간 한가운데 온다).
+     100dvh 는 아이폰 주소창이 접히고 펴져도 실제 보이는 높이를 따라간다. */
   .wrap { max-width: 420px; margin: 0 auto;
+    display: flex; flex-direction: column;
+    min-height: 100vh; min-height: 100dvh;
     padding: calc(28px + env(safe-area-inset-top)) calc(20px + env(safe-area-inset-right))
              calc(22px + env(safe-area-inset-bottom)) calc(20px + env(safe-area-inset-left)); }
   .eyebrow { font-size: 12px; letter-spacing: .12em; color: var(--muted); text-transform: uppercase; }
@@ -61,7 +66,11 @@
   .notice { font-size: 14px; line-height: 1.6; margin: 4px 0 18px; padding: 12px 14px;
     background: var(--card); border: 1px solid var(--line); border-radius: 10px; }
   /* 검색은 맨 위 — 아래 목적지 영역과 구분선으로 갈라 준다(2026-08-16 사용자 지정) */
-  .search { margin: 0 0 14px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+  /* margin-bottom 을 0 으로 둔다 — 여기에 여백을 주면 구분선~로고 사이가
+     로고~화면바닥보다 그만큼 넓어져 로고가 위로 치우쳐 보인다. 목적지 영역은
+     아래 #dest 가 자기 여백을 직접 갖는다. */
+  .search { margin: 0; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+  #dest { margin-top: 14px; }
   .search-row { position: relative; display: flex; gap: 8px; }
   /* 입력창 안쪽 오른쪽 아이콘 버튼 (붙여넣기 ↔ 지우기) */
   .fieldbtn { position: absolute; top: 50%; right: 5px; transform: translateY(-50%);
@@ -162,7 +171,12 @@
   .empty-title { font-size: 19px; font-weight: 700; margin: 0 0 6px; }
   .empty-sub { font-size: 14px; line-height: 1.7; color: var(--muted); margin: 0; }
   /* ── FURYCLASSIC 브랜드 서명 ── */
-  .brand { margin-top: 22px; padding-top: 14px; text-align: center; }
+  /* margin 위아래 auto — 남는 세로 공간을 로고 위/아래로 똑같이 나눠 갖는다.
+     목록이 길어 여백이 없으면 auto 는 0 이 되어 평소처럼 아래에 붙는다.
+     min-height 로 목록에 너무 바짝 붙지 않을 최소 간격만 지킨다. */
+  .brand { margin: auto 0; padding-top: 14px; text-align: center;
+    flex: none; min-height: 92px;
+    display: flex; flex-direction: column; justify-content: center; }
   /* 레이싱 레드 스피드컷 — 기울여서 워드마크의 이탤릭과 각을 맞춘다 */
   .brand-cut { display: block; width: 54px; height: 4px; margin: 0 auto 13px;
     background: #E10600; transform: skewX(-18deg); border-radius: 1px; }
