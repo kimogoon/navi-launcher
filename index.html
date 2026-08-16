@@ -101,16 +101,21 @@
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .recent-item > button.del { flex: none; border: none; background: none;
     color: var(--muted); font-size: 18px; line-height: 1; padding: 8px 6px; }
-  /* 어떤 내비로 실행했는지 배지 — 각 앱 색을 옅게 깔아 한눈에 구분되게 */
-  .recent-item .app { flex: none; font-size: 11px; font-weight: 600; white-space: nowrap;
+  /* 어떤 내비로 실행했는지 배지 — 각 앱 색을 옅게 깔아 한눈에 구분되게.
+     클래스명에 a- 를 붙인다: 그냥 .apple/.tmap 을 쓰면 위쪽 '내비 버튼'의
+     같은 이름 규칙(.apple{background:#F2F2F4})이 배지에도 먹어서 흰 바탕에
+     흰 글씨가 된다(2026-08-17 실측 — Apple 배지가 흰 점처럼 보이던 원인). */
+  .recent-badges { flex: none; display: flex; flex-wrap: wrap; gap: 4px;
+    justify-content: flex-end; max-width: 58%; }
+  .recent-badges .app { font-size: 11px; font-weight: 600; white-space: nowrap;
     border-radius: 999px; padding: 4px 9px; border: 1px solid var(--line);
-    color: var(--muted); }
-  .recent-item .app.tmap     { color: #0264FB; border-color: #0264FB55; background: #0264FB14; }
-  .recent-item .app.naver    { color: #03A94E; border-color: #03C75A55; background: #03C75A14; }
-  .recent-item .app.kakao    { color: #A98800; border-color: #E8D10088; background: #FAE10022; }
-  .recent-item .app.kakaomap { color: #C97740; border-color: #E08A5255; background: #E08A5214; }
-  .recent-item .app.apple    { color: var(--text); }
-  .recent-item .app.google   { color: #8A8078; border-color: #8A807855; background: #8A807814; }
+    background: transparent; color: var(--muted); }
+  .recent-badges .app.a-tmap     { color: #2B7BFF; border-color: #0264FB66; background: #0264FB1a; }
+  .recent-badges .app.a-naver    { color: #14B85F; border-color: #03C75A66; background: #03C75A1a; }
+  .recent-badges .app.a-kakao    { color: #C9A400; border-color: #E8D10088; background: #FAE1001f; }
+  .recent-badges .app.a-kakaomap { color: #E08A52; border-color: #E08A5266; background: #E08A521a; }
+  .recent-badges .app.a-apple    { color: var(--text); border-color: var(--line); background: transparent; }
+  .recent-badges .app.a-google   { color: #A79C93; border-color: #8A807866; background: #8A80781a; }
   .search-results { margin-top: 10px; border: 1px solid var(--line); border-radius: 10px;
     overflow: hidden; display: none; }
   .search-results.show { display: block; }
@@ -369,7 +374,12 @@
       const v = JSON.parse(localStorage.getItem(RECENT_KEY));
       // 상한은 읽을 때도 적용한다. 저장할 때만 자르면 예전 버전이 남긴 데이터나
       // 손으로 넣은 값이 그대로 다 그려진다.
-      return Array.isArray(v) ? v.filter(r => r && r.name).slice(0, RECENT_MAX) : [];
+      // apps 는 '이 장소를 어떤 앱들로 실행했는지' 목록. 예전 버전은 마지막
+      // 하나만 app 문자열로 저장했으므로 읽을 때 배열로 올려 준다.
+      return Array.isArray(v) ? v.filter(r => r && r.name).map(r => ({
+        ...r,
+        apps: Array.isArray(r.apps) ? r.apps : (r.app ? [r.app] : []),
+      })).slice(0, RECENT_MAX) : [];
     } catch (_) { return []; }          // 사파리 프라이빗 모드 등에서 접근 거부될 수 있다
   }
   function saveRecent(list) {
@@ -380,14 +390,15 @@
     const prev = loadRecent();
     const k = recentKey(item);
     const old = prev.find(r => recentKey(r) === k);
-    // 같은 곳을 다시 고르면 예전에 어떤 앱으로 갔는지는 살려 둔다
-    const merged = old && old.app && !item.app ? { ...item, app: old.app } : item;
+    // 같은 곳을 다시 고르면 예전에 어떤 앱들로 갔는지는 살려 둔다
+    const merged = { ...item, apps: (old && old.apps) || item.apps || [] };
     const list = prev.filter(r => recentKey(r) !== k);
     list.unshift(merged);
     saveRecent(list);
   }
 
   // 내비 버튼을 실제로 눌렀을 때 '무엇으로 실행했는지'를 기록한다.
+  // 한 장소를 네이버·T맵·Apple 로 연달아 열면 셋 다 남는다(덮어쓰지 않는다).
   // 목록에 아직 없으면 이때 넣는다 — 검색 0건이라 고를 게 없었던 장소
   // (국내 상세 도로명주소 등)도 실제로 쓰면 최근 검색에 남게 하려는 것.
   // 타이핑 중에는 기록하지 않는다(오타가 목록을 더럽히지 않게).
@@ -396,12 +407,10 @@
     const k = recentKey(currentDest);
     const list = loadRecent();
     const i = list.findIndex(r => recentKey(r) === k);
-    if (i >= 0) {
-      list[i] = { ...list[i], app: cls };
-      list.unshift(list.splice(i, 1)[0]);      // 최근 쓴 것을 맨 위로
-    } else {
-      list.unshift({ ...currentDest, app: cls });
-    }
+    const entry = i >= 0 ? list.splice(i, 1)[0] : { ...currentDest, apps: [] };
+    const apps = Array.isArray(entry.apps) ? entry.apps.slice() : [];
+    if (!apps.includes(cls)) apps.push(cls);    // 쓴 순서대로 쌓는다
+    list.unshift({ ...entry, apps });           // 최근 쓴 곳을 맨 위로
     saveRecent(list);
     renderRecent();
   }
@@ -424,15 +433,16 @@
         chooseDestination(r.name, r.la, r.lo, r.addr || '');
       });
 
-      // 어떤 앱으로 실행했는지 배지 (실행한 적 있을 때만)
-      const badge = document.createElement('span');
-      badge.className = 'app';
-      if (r.app && APP_LABEL[r.app]) {
-        badge.textContent = APP_LABEL[r.app];
-        badge.classList.add(r.app);
-      } else {
-        badge.hidden = true;
-      }
+      // 어떤 앱들로 실행했는지 배지 (실행한 적 있을 때만, 쓴 순서대로 전부)
+      const badges = document.createElement('div');
+      badges.className = 'recent-badges';
+      (r.apps || []).filter(a => APP_LABEL[a]).forEach(a => {
+        const b = document.createElement('span');
+        b.className = 'app a-' + a;
+        b.textContent = APP_LABEL[a];
+        badges.appendChild(b);
+      });
+      if (!badges.children.length) badges.hidden = true;
 
       const del = document.createElement('button');
       del.type = 'button';
@@ -444,7 +454,7 @@
         renderRecent();
       });
 
-      row.append(pick, badge, del);
+      row.append(pick, badges, del);
       recentList.appendChild(row);
     });
     recentBox.hidden = false;
@@ -668,6 +678,11 @@
 
   searchInput.addEventListener('input', onInput);
   searchInput.addEventListener('search', onInput);   // iOS 검색창 × 버튼
+  // 검색창을 누르면(비어 있을 때) 최근 검색을 목록으로 띄운다 —
+  // 목적지를 보고 있는 중에도 바로 이전 장소로 갈 수 있게(2026-08-17 사용자 지정)
+  searchInput.addEventListener('focus', () => {
+    if (!searchInput.value.trim()) renderRecent();
+  });
   searchInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {            // 즉시 검색하고 키보드 내리기
       e.preventDefault();
