@@ -101,6 +101,16 @@
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .recent-item > button.del { flex: none; border: none; background: none;
     color: var(--muted); font-size: 18px; line-height: 1; padding: 8px 6px; }
+  /* 어떤 내비로 실행했는지 배지 — 각 앱 색을 옅게 깔아 한눈에 구분되게 */
+  .recent-item .app { flex: none; font-size: 11px; font-weight: 600; white-space: nowrap;
+    border-radius: 999px; padding: 4px 9px; border: 1px solid var(--line);
+    color: var(--muted); }
+  .recent-item .app.tmap     { color: #0264FB; border-color: #0264FB55; background: #0264FB14; }
+  .recent-item .app.naver    { color: #03A94E; border-color: #03C75A55; background: #03C75A14; }
+  .recent-item .app.kakao    { color: #A98800; border-color: #E8D10088; background: #FAE10022; }
+  .recent-item .app.kakaomap { color: #C97740; border-color: #E08A5255; background: #E08A5214; }
+  .recent-item .app.apple    { color: var(--text); }
+  .recent-item .app.google   { color: #8A8078; border-color: #8A807855; background: #8A807814; }
   .search-results { margin-top: 10px; border: 1px solid var(--line); border-radius: 10px;
     overflow: hidden; display: none; }
   .search-results.show { display: block; }
@@ -223,9 +233,14 @@
   const btns = document.getElementById('btns');
   let missingEl = null;
 
+  // 최근 검색에 '무엇으로 실행했는지' 배지를 달기 위한 이름표
+  const APP_LABEL = { tmap: 'T맵', naver: '네이버', kakao: '카카오내비',
+                      kakaomap: '카카오맵', apple: 'Apple', google: '구글' };
+
   function btn(cls, label, href) {
     const a = document.createElement('a');
     a.className = 'btn ' + cls; a.textContent = label; a.href = href;
+    a.addEventListener('click', () => markUsed(cls));
     btns.appendChild(a);
     return a;
   }
@@ -255,6 +270,7 @@
       knbtn.textContent = '카카오내비 실행 (장소명 복사)';
       knbtn.addEventListener('click', async (e) => {
         e.preventDefault();
+        markUsed('kakao');
         try {
           await navigator.clipboard.writeText(placeName);
           knbtn.textContent = '복사됨! 검색창에 붙여넣기 하세요';
@@ -351,7 +367,9 @@
   function loadRecent() {
     try {
       const v = JSON.parse(localStorage.getItem(RECENT_KEY));
-      return Array.isArray(v) ? v.filter(r => r && r.name) : [];
+      // 상한은 읽을 때도 적용한다. 저장할 때만 자르면 예전 버전이 남긴 데이터나
+      // 손으로 넣은 값이 그대로 다 그려진다.
+      return Array.isArray(v) ? v.filter(r => r && r.name).slice(0, RECENT_MAX) : [];
     } catch (_) { return []; }          // 사파리 프라이빗 모드 등에서 접근 거부될 수 있다
   }
   function saveRecent(list) {
@@ -359,9 +377,33 @@
     catch (_) { /* 저장 실패해도 검색 자체는 계속 되게 둔다 */ }
   }
   function pushRecent(item) {
-    const list = loadRecent().filter(r => recentKey(r) !== recentKey(item));
-    list.unshift(item);
+    const prev = loadRecent();
+    const k = recentKey(item);
+    const old = prev.find(r => recentKey(r) === k);
+    // 같은 곳을 다시 고르면 예전에 어떤 앱으로 갔는지는 살려 둔다
+    const merged = old && old.app && !item.app ? { ...item, app: old.app } : item;
+    const list = prev.filter(r => recentKey(r) !== k);
+    list.unshift(merged);
     saveRecent(list);
+  }
+
+  // 내비 버튼을 실제로 눌렀을 때 '무엇으로 실행했는지'를 기록한다.
+  // 목록에 아직 없으면 이때 넣는다 — 검색 0건이라 고를 게 없었던 장소
+  // (국내 상세 도로명주소 등)도 실제로 쓰면 최근 검색에 남게 하려는 것.
+  // 타이핑 중에는 기록하지 않는다(오타가 목록을 더럽히지 않게).
+  function markUsed(cls) {
+    if (!currentDest) return;
+    const k = recentKey(currentDest);
+    const list = loadRecent();
+    const i = list.findIndex(r => recentKey(r) === k);
+    if (i >= 0) {
+      list[i] = { ...list[i], app: cls };
+      list.unshift(list.splice(i, 1)[0]);      // 최근 쓴 것을 맨 위로
+    } else {
+      list.unshift({ ...currentDest, app: cls });
+    }
+    saveRecent(list);
+    renderRecent();
   }
 
   function renderRecent() {
@@ -382,6 +424,16 @@
         chooseDestination(r.name, r.la, r.lo, r.addr || '');
       });
 
+      // 어떤 앱으로 실행했는지 배지 (실행한 적 있을 때만)
+      const badge = document.createElement('span');
+      badge.className = 'app';
+      if (r.app && APP_LABEL[r.app]) {
+        badge.textContent = APP_LABEL[r.app];
+        badge.classList.add(r.app);
+      } else {
+        badge.hidden = true;
+      }
+
       const del = document.createElement('button');
       del.type = 'button';
       del.className = 'del';
@@ -392,7 +444,7 @@
         renderRecent();
       });
 
-      row.append(pick, del);
+      row.append(pick, badge, del);
       recentList.appendChild(row);
     });
     recentBox.hidden = false;
