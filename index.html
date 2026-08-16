@@ -81,6 +81,8 @@
     stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
   /* 아직 등록 안 된 집·사무실은 점선+흐리게 — 눌러야 할 게 남았다는 신호 */
   .chip.unset { color: var(--muted); border-style: dashed; }
+  /* 등록 대기(칩을 눌러 '다음에 고르는 장소를 여기 저장' 상태) */
+  .chip.pending { border-style: solid; border-color: var(--accent); color: var(--accent); }
   .savebar { display: flex; gap: 8px; margin-top: 14px; }
   .savebar button { flex: 1; height: 38px; border-radius: 10px; font-size: 13px;
     border: 1px solid var(--line); background: var(--card); color: var(--text); }
@@ -168,14 +170,16 @@
     <h1 id="place">장소</h1>
     <div class="when" id="when"></div>
     <div class="notice" id="notice"></div>
-    <div class="btns" id="btns"></div>
-    <p class="resolved" id="resolved"></p>
-
-    <!-- 지금 목적지를 집/사무실로 등록. 별도 등록 화면 없이 쓰던 흐름에서 바로 저장된다. -->
+    <!-- 지금 목적지를 집/사무실로 등록.
+         내비 버튼 '위'에 둔다 — 아래에 두면 버튼 6개에 밀려 화면 밖으로
+         나가서 등록 방법이 안 보인다(2026-08-17 사용자 피드백). -->
     <div class="savebar" id="saveBar" hidden>
       <button type="button" id="saveHome"></button>
       <button type="button" id="saveOffice"></button>
     </div>
+
+    <div class="btns" id="btns"></div>
+    <p class="resolved" id="resolved"></p>
 
     <p class="note">버튼을 누르면 해당 내비 앱이 목적지가 설정된 상태로 실행됩니다.
       앱이 설치돼 있지 않으면 반응이 없을 수 있어요.</p>
@@ -302,6 +306,7 @@
   // 검색해서 고른 결과로 renderNav 를 다시 불러 위 버튼들을 그 장소 기준으로 교체한다.
   const searchInput = document.getElementById('searchInput');
   const searchStatus = document.getElementById('searchStatus');
+  const searchHint = document.getElementById('searchHint');
   const searchResults = document.getElementById('searchResults');
   let searchSeq = 0;
 
@@ -461,13 +466,27 @@
     });
   });
 
+  // 등록 대기 상태 — 미등록 칩을 누르면 '다음에 고르는 장소'가 그 칸에 저장된다.
+  // 칩을 눌러 바로 등록하는 게 사람들이 가장 먼저 시도하는 동작이라 이걸 지원한다
+  // (2026-08-17 사용자 피드백: '집 사무실 등록이 안됨').
+  let pendingSave = null;
+
+  function setPending(kind) {
+    pendingSave = kind;
+    searchHint.textContent = kind
+      ? `${SAVED_TO[kind]} 등록할 장소를 검색해 고르세요. (다시 누르면 취소)`
+      : '검색해서 고르면 아래 목적지가 그 장소로 바뀝니다.';
+    chipHome.classList.toggle('pending', kind === 'home');
+    chipOffice.classList.toggle('pending', kind === 'office');
+  }
+
   [['home', chipHome], ['office', chipOffice]].forEach(([kind, chip]) => {
     chip.addEventListener('click', () => {
+      if (pendingSave === kind) { setPending(null); searchStatus.textContent = ''; return; }
       const saved = loadSaved(kind);
-      if (saved) { chooseDestination(saved.name, saved.la, saved.lo, saved.addr || ''); return; }
-      // 미등록이면 등록 방법을 알려 주고 검색으로 유도한다
-      searchStatus.textContent =
-        `${SAVED_LABEL[kind]}이 아직 없습니다. 장소를 검색해 고른 뒤 '${SAVED_TO[kind]} 저장'을 누르세요.`;
+      if (saved) { setPending(null); chooseDestination(saved.name, saved.la, saved.lo, saved.addr || ''); return; }
+      setPending(kind);                 // 미등록 → 등록 모드로 들어간다
+      searchStatus.textContent = '';
       searchInput.focus();
     });
   });
@@ -478,9 +497,19 @@
     const item = { name: placeName, la: +placeLa, lo: +placeLo, addr: placeAddr || '' };
     currentDest = isFinite(item.la) && isFinite(item.lo) ? item : null;
     pushRecent(item);
+
+    // 등록 모드로 들어와 있었다면 고른 장소를 그 칸에 바로 저장한다
+    let savedMsg = '';
+    if (pendingSave && currentDest) {
+      setSaved(pendingSave, currentDest);
+      savedMsg = `'${item.name}'${objParticle(item.name)} ${SAVED_TO[pendingSave]} 저장했습니다.`;
+      setPending(null);
+      renderQuickbar();
+    }
+
     clearResults();
     recentBox.hidden = true;
-    searchStatus.textContent = '';
+    searchStatus.textContent = savedMsg;
     searchInput.value = '';
     searchInput.blur();                 // 키보드 내려서 버튼이 가려지지 않게
     renderSaveBar();
@@ -587,6 +616,7 @@
   function goHome() {
     clearTimeout(debounceTimer);
     searchSeq++;
+    setPending(null);                   // 등록 대기도 함께 취소
     searchInput.value = '';
     clearResults();
     searchStatus.textContent = '';
