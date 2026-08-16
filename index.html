@@ -62,14 +62,30 @@
     background: var(--card); border: 1px solid var(--line); border-radius: 10px; }
   /* 검색은 맨 위 — 아래 목적지 영역과 구분선으로 갈라 준다(2026-08-16 사용자 지정) */
   .search { margin: 0 0 20px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
-  .search-row { display: flex; gap: 8px; }
+  .search-row { position: relative; display: flex; gap: 8px; }
+  /* 입력창 안쪽 오른쪽 아이콘 버튼 (붙여넣기 ↔ 지우기) */
+  .fieldbtn { position: absolute; top: 50%; right: 5px; transform: translateY(-50%);
+    width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;
+    border: none; border-radius: 9px; background: transparent; color: var(--muted); }
+  .fieldbtn:active { background: var(--bg); }
+  .fieldbtn svg { width: 19px; height: 19px; fill: none; stroke: currentColor;
+    stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  /* 아이콘 전환은 클래스로 한다. SVG 에는 hidden IDL 속성이 없어서
+     (`'hidden' in SVGElement.prototype` === false) JS 로 el.hidden = true 를
+     줘도 렌더링에 반영되지 않는다 — 두 아이콘이 같이 보였던 원인. */
+  .fieldbtn .ic-clear { display: none; }
+  .fieldbtn.has-text .ic-paste { display: none; }
+  .fieldbtn.has-text .ic-clear { display: block; }
   /* font-size 는 반드시 16px 이상 — iOS Safari 는 16px 미만 입력창을 탭하면
      페이지를 자동 확대해 버린다. 확대되면 가운데 정렬이 풀리고 오른쪽이
      잘려 나간다(2026-08-17 아이폰에서 확인). min-width:0 은 flex 아이템의
      기본 min-width:auto 때문에 입력창이 안 줄어들어 생기는 가로 넘침 방지. */
   .search-row input { flex: 1; min-width: 0; height: 46px; border-radius: 10px;
     border: 1px solid var(--line); background: var(--card); color: var(--text);
-    font-size: 16px; padding: 0 12px; -webkit-appearance: none; appearance: none; }
+    font-size: 16px; padding: 0 46px 0 12px;   /* 오른쪽은 아이콘 버튼 자리 */
+    -webkit-appearance: none; appearance: none; }
+  /* appearance:none 으로 지운 기본 취소버튼 자리를 우리 버튼이 대신한다 */
+  .search-row input::-webkit-search-cancel-button { display: none; }
   .search-row input:focus-visible { outline: 3px solid var(--accent); outline-offset: 1px; }
   .search-hint { font-size: 12px; color: var(--muted); margin: 8px 2px 0; }
   /* 집·사무실·처음으로 아이콘 바 */
@@ -144,6 +160,17 @@
       <input id="searchInput" type="search" inputmode="search" placeholder="지명·주소 검색"
         autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
         enterkeyhint="search">
+      <!-- 입력창 '안쪽' 오른쪽에 겹쳐 둔다 — 옆에 따로 두면 입력 폭을 뺏는다.
+           비어 있으면 붙여넣기, 글자가 있으면 지우기로 바뀐다. -->
+      <button id="fieldBtn" type="button" class="fieldbtn" aria-label="붙여넣기">
+        <svg class="ic-paste" viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="8.5" y="2.8" width="7" height="3.8" rx="1.2"/>
+          <path d="M15.5 4.7H18a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V5.7a1 1 0 0 1 1-1h2.5"/>
+        </svg>
+        <svg class="ic-clear" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/>
+        </svg>
+      </button>
     </div>
     <!-- 집·사무실 바로가기 + 처음으로 (아이콘) -->
     <div class="quickbar">
@@ -599,6 +626,7 @@
     recentBox.hidden = true;
     searchStatus.textContent = savedMsg;
     searchInput.value = '';
+    updateFieldBtn();
     searchInput.blur();                 // 키보드 내려서 버튼이 가려지지 않게
     renderSaveBar();
     document.getElementById('place').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -664,6 +692,7 @@
 
   function onInput() {
     const q = searchInput.value.trim();
+    updateFieldBtn();
     clearTimeout(debounceTimer);
     if (q.length < MIN_CHARS) {
       searchSeq++;                      // 진행 중이던 검색 결과가 뒤늦게 붙는 것 방지
@@ -675,6 +704,39 @@
     recentBox.hidden = true;
     debounceTimer = setTimeout(() => runSearch(q), DEBOUNCE_MS);
   }
+
+  // ---------------- 입력창 안쪽 버튼: 붙여넣기 ↔ 지우기 ----------------
+  // 카카오맵·메시지 등에서 주소를 복사해 온 경우가 많아 한 번에 넣게 한다.
+  const fieldBtn = document.getElementById('fieldBtn');
+
+  function updateFieldBtn() {
+    const has = !!searchInput.value;
+    fieldBtn.classList.toggle('has-text', has);
+    fieldBtn.setAttribute('aria-label', has ? '지우기' : '붙여넣기');
+  }
+
+  fieldBtn.addEventListener('click', async () => {
+    if (searchInput.value) {            // 지우기
+      searchInput.value = '';
+      onInput();
+      searchInput.focus();
+      return;
+    }
+    // 붙여넣기 — iOS 는 여기서 시스템 '붙여넣기' 확인을 한 번 띄운다.
+    // 클립보드 읽기는 https + 사용자 제스처 안에서만 허용된다.
+    try {
+      const t = (await navigator.clipboard.readText() || '').trim();
+      if (!t) { searchStatus.textContent = '복사된 내용이 없습니다.'; searchInput.focus(); return; }
+      searchInput.value = t.replace(/\s+/g, ' ').slice(0, 200);
+      searchStatus.textContent = '';
+      onInput();                        // 붙여넣자마자 검색까지 이어진다
+      searchInput.focus();
+    } catch (_) {
+      // 권한 거부·미지원 브라우저 — 직접 붙여넣도록 안내
+      searchStatus.textContent = '붙여넣기 권한이 없습니다. 입력창을 길게 눌러 붙여넣어 주세요.';
+      searchInput.focus();
+    }
+  });
 
   searchInput.addEventListener('input', onInput);
   searchInput.addEventListener('search', onInput);   // iOS 검색창 × 버튼
@@ -699,6 +761,7 @@
     searchSeq++;
     setPending(null);                   // 등록 대기도 함께 취소
     searchInput.value = '';
+    updateFieldBtn();
     clearResults();
     searchStatus.textContent = '';
     if (hasDest) {
