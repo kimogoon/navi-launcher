@@ -266,7 +266,17 @@
         setTimeout(() => { location.href = 'kakaonavi://'; }, 250);
       });
       btns.appendChild(knbtn);
-      btn('kakaomap', '카카오맵 길안내(차량)', `kakaomap://route?ep=${placeLa},${placeLo}&by=CAR`);
+      // 카카오맵만 유니버설 링크(https)를 쓴다 → iOS의 "'카카오맵'에서 열겠습니까?"
+      // 확인창 없이 앱이 바로 뜬다. 근거(2026-08-17 실측):
+      //   · applink.map.kakao.com/.well-known/apple-app-site-association 에
+      //     net.daum.maps 가 paths:["*"] 로 등록돼 있다 = 전 경로가 유니버설 링크.
+      //   · 반면 map.kakao.com AASA 에는 NOT "/link/*" 가 박혀 있어 예전에 쓰던
+      //     map.kakao.com/link/... 는 앱으로 안 넘어가고 확인창을 거쳤다.
+      //   · 파라미터 형식은 카카오 자신이 /link/to/ 에서 이 URL 로 리다이렉트하는
+      //     형태를 그대로 따랐다(sp/sn 은 출발지, 비우면 현재위치).
+      //   · 좌표는 자르지 말고 원본 정밀도로 넘길 것(끝자리를 줄이면 404 로 떨어졌다).
+      btn('kakaomap', '카카오맵 길안내(차량)',
+        `https://applink.map.kakao.com/route?sp=&sn=&ep=${placeLa}%2C${placeLo}&en=${enc}&by=car`);
       btn('apple', 'Apple 지도에서 보기', `https://maps.apple.com/?q=${enc}&ll=${placeLa},${placeLo}`);
       // 구글맵: 좌표를 주면 '핀 고정 위치'로 떠서, 장소명으로 검색해 정식 명칭이 뜨게 한다
       const gDest = placeAddr ? encodeURIComponent(placeAddr)
