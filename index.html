@@ -67,14 +67,28 @@
      페이지를 자동 확대해 버린다. 확대되면 가운데 정렬이 풀리고 오른쪽이
      잘려 나간다(2026-08-17 아이폰에서 확인). min-width:0 은 flex 아이템의
      기본 min-width:auto 때문에 입력창이 안 줄어들어 생기는 가로 넘침 방지. */
-  .search-row input { flex: 1; min-width: 0; height: 44px; border-radius: 10px;
+  .search-row input { flex: 1; min-width: 0; height: 46px; border-radius: 10px;
     border: 1px solid var(--line); background: var(--card); color: var(--text);
-    font-size: 16px; padding: 0 12px; }
+    font-size: 16px; padding: 0 12px; -webkit-appearance: none; appearance: none; }
   .search-row input:focus-visible { outline: 3px solid var(--accent); outline-offset: 1px; }
-  .search-row button { flex: none; height: 44px; padding: 0 16px; border-radius: 10px;
-    border: 1px solid var(--line); background: var(--accent); color: #fff;
-    font-size: 16px; font-weight: 600; }
-  .search-hint { font-size: 12px; color: var(--muted); margin: 6px 2px 0; }
+  .search-meta { display: flex; align-items: baseline; gap: 10px; margin: 7px 2px 0; }
+  .search-hint { font-size: 12px; color: var(--muted); margin: 0; flex: 1; }
+  .homebtn { flex: none; border: 1px solid var(--line); background: var(--card);
+    color: var(--text); font-size: 12px; border-radius: 999px; padding: 5px 12px; }
+  /* 최근 검색 */
+  .recent { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .recent-head { display: flex; align-items: center; justify-content: space-between;
+    font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .recent-head button { border: none; background: none; color: var(--muted);
+    font-size: 12px; text-decoration: underline; padding: 4px 2px; }
+  .recent-item { display: flex; align-items: center; gap: 8px; }
+  .recent-item > button.pick { flex: 1; min-width: 0; text-align: left; border: none;
+    background: none; color: var(--text); padding: 10px 2px; font-size: 15px; }
+  .recent-item .rn { font-weight: 600; }
+  .recent-item .ra { color: var(--muted); font-size: 12px; margin-top: 2px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .recent-item > button.del { flex: none; border: none; background: none;
+    color: var(--muted); font-size: 18px; line-height: 1; padding: 8px 6px; }
   .search-results { margin-top: 10px; border: 1px solid var(--line); border-radius: 10px;
     overflow: hidden; display: none; }
   .search-results.show { display: block; }
@@ -85,10 +99,6 @@
   .search-results button:hover, .search-results button:focus-visible { background: var(--bg); }
   .search-results .rname { font-weight: 700; }
   .search-results .raddr { color: var(--muted); font-size: 12px; margin-top: 2px; }
-  .search-results a.maplink { display: block; padding: 12px 14px; font-size: 14px;
-    background: var(--bg); color: var(--accent); text-decoration: none;
-    border-bottom: 1px solid var(--line); }
-  .search-results a.maplink:last-child { border-bottom: none; }
   .search-status { font-size: 13px; color: var(--muted); margin-top: 8px; }
   /* 홈 화면 아이콘으로 열었을 때(목적지 없음) 보여 주는 빈 화면 */
   .empty { text-align: center; padding: 44px 8px 20px; }
@@ -102,14 +112,27 @@
 
 <div class="wrap">
   <div class="search">
+    <!-- 검색 버튼 없음 — 입력하는 동안 자동으로 검색된다(디바운스) -->
     <div class="search-row">
-      <input id="searchInput" type="text" inputmode="search" placeholder="다른 지명·주소 검색"
-        autocomplete="off">
-      <button id="searchBtn" type="button">검색</button>
+      <input id="searchInput" type="search" inputmode="search" placeholder="지명·주소 검색"
+        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+        enterkeyhint="search">
     </div>
-    <p class="search-hint">검색해서 고르면 아래 목적지가 그 장소로 바뀝니다.</p>
+    <div class="search-meta">
+      <p class="search-hint" id="searchHint">검색해서 고르면 아래 목적지가 그 장소로 바뀝니다.</p>
+      <button class="homebtn" id="homeBtn" type="button" hidden>처음으로</button>
+    </div>
     <p class="search-status" id="searchStatus"></p>
     <div class="search-results" id="searchResults"></div>
+
+    <!-- 최근 검색: 고른 목적지를 좌표까지 저장해 두므로 다시 누르면 재검색 없이 바로 뜬다 -->
+    <div class="recent" id="recent" hidden>
+      <div class="recent-head">
+        <span>최근 검색</span>
+        <button type="button" id="recentClear">전체 삭제</button>
+      </div>
+      <div id="recentList"></div>
+    </div>
   </div>
 
   <!-- 목적지 영역. 홈 화면 아이콘으로 열면(링크 파라미터 없음) 통째로 숨기고
@@ -123,7 +146,7 @@
     <p class="resolved" id="resolved"></p>
 
     <p class="note">버튼을 누르면 해당 내비 앱이 목적지가 설정된 상태로 실행됩니다.
-      앱이 없으면 반응이 없을 수 있어요 — 아래 지도 링크를 이용하세요.</p>
+      앱이 설치돼 있지 않으면 반응이 없을 수 있어요.</p>
   </div>
 
   <div class="empty" id="empty" hidden>
@@ -246,7 +269,6 @@
   // --- 런처 자체 검색: OpenStreetMap Nominatim (키 필요 없음, 무료) ---
   // 검색해서 고른 결과로 renderNav 를 다시 불러 위 버튼들을 그 장소 기준으로 교체한다.
   const searchInput = document.getElementById('searchInput');
-  const searchBtn = document.getElementById('searchBtn');
   const searchStatus = document.getElementById('searchStatus');
   const searchResults = document.getElementById('searchResults');
   let searchSeq = 0;
@@ -271,49 +293,110 @@
     return kept.reverse().join(' ');
   }
 
-  // 지도앱 바로 검색 링크 — Nominatim(OSM)은 역·주소·랜드마크는 잘 찾지만
-  // '인천혼다' 같은 국내 소상공인 상호는 대부분 없다. 브라우저에서 카카오
-  // 지도 검색 API 를 직접 부를 수는 없어서(CORS 차단 확인) 좌표를 못 구한
-  // 검색어는 지도앱으로 그대로 넘겨 준다 — 앱 안에서는 다 찾아진다.
-  function appendMapAppLinks(q) {
-    const encQ = encodeURIComponent(q);
-    const apps = [
-      ['카카오맵', `https://map.kakao.com/link/search/${encQ}`],
-      ['네이버지도', `https://map.naver.com/p/search/${encQ}`],
-      ['T맵', `tmap://search?name=${encQ}`],
-      ['구글지도', `https://www.google.com/maps/search/?api=1&query=${encQ}`],
-    ];
-    apps.forEach(([label, href]) => {
-      const a = document.createElement('a');
-      a.href = href;
-      a.className = 'maplink';
-      a.textContent = `${label}에서 '${q}' 검색`;
-      searchResults.appendChild(a);
-    });
-    searchResults.classList.add('show');
+  // ---------------- 최근 검색 ----------------
+  // 검색어 문자열이 아니라 '고른 목적지(좌표까지)'를 저장한다.
+  // 그래야 다시 누를 때 네트워크 검색 없이 즉시 내비 버튼을 띄울 수 있다.
+  const RECENT_KEY = 'navi.recent.v1';
+  const RECENT_MAX = 8;
+  const recentBox = document.getElementById('recent');
+  const recentList = document.getElementById('recentList');
+
+  const recentKey = r => `${r.name}|${(+r.la).toFixed(4)},${(+r.lo).toFixed(4)}`;
+
+  function loadRecent() {
+    try {
+      const v = JSON.parse(localStorage.getItem(RECENT_KEY));
+      return Array.isArray(v) ? v.filter(r => r && r.name && isFinite(r.la) && isFinite(r.lo)) : [];
+    } catch (_) { return []; }          // 사파리 프라이빗 모드 등에서 접근 거부될 수 있다
   }
+  function saveRecent(list) {
+    try { localStorage.setItem(RECENT_KEY, JSON.stringify(list.slice(0, RECENT_MAX))); }
+    catch (_) { /* 저장 실패해도 검색 자체는 계속 되게 둔다 */ }
+  }
+  function pushRecent(item) {
+    const list = loadRecent().filter(r => recentKey(r) !== recentKey(item));
+    list.unshift(item);
+    saveRecent(list);
+  }
+
+  function renderRecent() {
+    const list = loadRecent();
+    recentList.innerHTML = '';
+    if (!list.length) { recentBox.hidden = true; return; }
+    list.forEach(r => {
+      const row = document.createElement('div');
+      row.className = 'recent-item';
+
+      const pick = document.createElement('button');
+      pick.type = 'button';
+      pick.className = 'pick';
+      pick.innerHTML = '<div class="rn"></div><div class="ra"></div>';
+      pick.querySelector('.rn').textContent = r.name;
+      pick.querySelector('.ra').textContent = r.addr || '';
+      pick.addEventListener('click', () => {
+        chooseDestination(r.name, r.la, r.lo, r.addr || '');
+      });
+
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'del';
+      del.textContent = '×';
+      del.setAttribute('aria-label', `${r.name} 최근 검색에서 삭제`);
+      del.addEventListener('click', () => {
+        saveRecent(loadRecent().filter(x => recentKey(x) !== recentKey(r)));
+        renderRecent();
+      });
+
+      row.append(pick, del);
+      recentList.appendChild(row);
+    });
+    recentBox.hidden = false;
+  }
+
+  document.getElementById('recentClear').addEventListener('click', () => {
+    saveRecent([]);
+    renderRecent();
+  });
+
+  // 목적지 확정 — 검색 결과·최근 검색 양쪽에서 공통으로 쓴다
+  function chooseDestination(placeName, placeLa, placeLo, placeAddr) {
+    renderNav(placeName, placeLa, placeLo, placeAddr);
+    pushRecent({ name: placeName, la: +placeLa, lo: +placeLo, addr: placeAddr || '' });
+    clearResults();
+    recentBox.hidden = true;
+    searchStatus.textContent = '';
+    searchInput.value = '';
+    searchInput.blur();                 // 키보드 내려서 버튼이 가려지지 않게
+    updateHomeBtn();
+    document.getElementById('place').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // ---------------- 검색 (입력하는 즉시, 디바운스) ----------------
+  const MIN_CHARS = 2;      // 1글자는 후보가 너무 많고 Nominatim 부담도 크다
+  const DEBOUNCE_MS = 450;  // Nominatim 이용 정책상 초당 1회 이하로 유지
+  let debounceTimer = null;
 
   async function runSearch(query) {
     const q = (query || '').trim();
     if (!q) return;
     const mySeq = ++searchSeq;
-    clearResults();
     searchStatus.textContent = '검색 중…';
     let list = [];
     try {
       const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1'
-        + '&countrycodes=kr&accept-language=ko&limit=6&q=' + encodeURIComponent(q);
+        + '&countrycodes=kr&accept-language=ko&limit=8&q=' + encodeURIComponent(q);
       const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
       if (mySeq !== searchSeq) return; // 그 사이 새 검색이 시작됐으면 이 결과는 버린다
       if (!res.ok) throw new Error('HTTP ' + res.status);
       list = await res.json();
     } catch (err) {
       if (mySeq !== searchSeq) return;
-      searchStatus.textContent = '검색 서버에 연결하지 못했습니다. 지도앱에서 바로 열어 보세요.';
-      appendMapAppLinks(q);
+      clearResults();
+      searchStatus.textContent = '검색 서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.';
       return;
     }
 
+    clearResults();
     list.forEach(item => {
       const row = document.createElement('button');
       row.type = 'button';
@@ -323,25 +406,87 @@
       row.querySelector('.rname').textContent = display;
       row.querySelector('.raddr').textContent = addrText;
       row.addEventListener('click', () => {
-        renderNav(display, parseFloat(item.lat), parseFloat(item.lon), addrText);
-        clearResults();
-        searchStatus.textContent = '';
-        searchInput.value = display;
-        // 검색창이 맨 위라, 고른 뒤에는 바뀐 목적지와 내비 버튼이 보이도록 내려 준다.
-        document.getElementById('place').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        chooseDestination(display, parseFloat(item.lat), parseFloat(item.lon), addrText);
       });
       searchResults.appendChild(row);
     });
 
-    searchStatus.textContent = list.length
-      ? '고르면 목적지가 바뀝니다. 상호가 안 보이면 아래 지도앱에서 바로 찾아보세요.'
-      : `'${q}' 좌표를 못 찾았습니다 — 지도앱에서 바로 열어 보세요.`;
-    appendMapAppLinks(q);
+    if (list.length) {
+      searchResults.classList.add('show');
+      searchStatus.textContent = '';
+    } else {
+      searchStatus.textContent = `'${q}' 검색 결과가 없습니다.`;
+    }
   }
 
-  searchBtn.addEventListener('click', () => runSearch(searchInput.value));
+  function onInput() {
+    const q = searchInput.value.trim();
+    updateHomeBtn();
+    clearTimeout(debounceTimer);
+    if (q.length < MIN_CHARS) {
+      searchSeq++;                      // 진행 중이던 검색 결과가 뒤늦게 붙는 것 방지
+      clearResults();
+      searchStatus.textContent = '';
+      if (!q) renderRecent();           // 다 지우면 최근 검색을 다시 보여준다
+      return;
+    }
+    recentBox.hidden = true;
+    debounceTimer = setTimeout(() => runSearch(q), DEBOUNCE_MS);
+  }
+
+  searchInput.addEventListener('input', onInput);
+  searchInput.addEventListener('search', onInput);   // iOS 검색창 × 버튼
   searchInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); runSearch(searchInput.value); }
+    if (e.key === 'Enter') {            // 즉시 검색하고 키보드 내리기
+      e.preventDefault();
+      clearTimeout(debounceTimer);
+      searchInput.blur();
+      const q = searchInput.value.trim();
+      if (q.length >= MIN_CHARS) runSearch(q);
+    }
+  });
+
+  // ---------------- 처음으로(초기화) ----------------
+  const homeBtn = document.getElementById('homeBtn');
+
+  // 초기화할 게 있을 때만 버튼을 띄운다.
+  function updateHomeBtn() {
+    const dirty = !!searchInput.value.trim()
+      || (!hasDest && !document.getElementById('dest').hidden)   // 앱 모드에서 목적지를 고른 상태
+      || (hasDest && document.getElementById('place').textContent !== name); // 링크 장소를 바꾼 상태
+    homeBtn.hidden = !dirty;
+  }
+
+  function goHome() {
+    clearTimeout(debounceTimer);
+    searchSeq++;
+    searchInput.value = '';
+    clearResults();
+    searchStatus.textContent = '';
+    if (hasDest) {
+      // 링크로 열린 경우엔 링크의 원래 목적지로 되돌린다(앱 초기화와 구분)
+      renderNav(name, la, lo, addr);
+    } else {
+      document.getElementById('dest').hidden = true;
+      document.getElementById('empty').hidden = false;
+      document.title = '길안내';
+    }
+    renderRecent();
+    updateHomeBtn();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  homeBtn.addEventListener('click', goHome);
+
+  // 앱 모드에서 내비 앱에 다녀오면(백그라운드 후 복귀) 첫 화면으로 되돌린다.
+  // 링크로 연 경우는 약속 장소를 유지해야 하므로 건드리지 않는다.
+  let hiddenAt = 0;
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { hiddenAt = Date.now(); return; }
+    if (hasDest) return;
+    // 잠깐 가려진 정도(알림 배너 등)로는 초기화하지 않는다
+    if (hiddenAt && Date.now() - hiddenAt > 1500) goHome();
+    hiddenAt = 0;
   });
 
   // 좌표를 못 찾은 채로 열린 경우, 원래 장소명으로 미리 검색해 후보를 바로 보여준다
@@ -349,7 +494,10 @@
   if (hasDest && !(isFinite(la) && isFinite(lo)) && name && name !== '약속 장소') {
     searchInput.value = name;
     runSearch(name);
+  } else if (!hasDest) {
+    renderRecent();
   }
+  updateHomeBtn();
 </script>
 
 </body>
