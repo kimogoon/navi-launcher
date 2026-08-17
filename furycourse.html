@@ -238,17 +238,17 @@ h1 small{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.02em;
 .runbig.wet .wx .d span,.runbig.wet .rs{opacity:.66}
 /* 나이키·애플워치 러닝 페이스의 어법 — 아주 굵고 살짝 눕고 자간을 바짝 조인 대문자.
    가로로 조금 늘려(scaleX) 폭을 채운다. 시스템 폰트에는 넓은 굵기가 없어 변형으로 낸다. */
-/* 원 안 글자는 RUN 을 기준으로 삼는다. 브랜드도 GEAR 도 GAS STATION 도 같은 규칙 —
-   길수록 한 단계씩 줄여서 어떤 말이 와도 원 안에 담긴다. */
+/* 원 안 글자는 글자 수에 반비례해 매끄럽게 줄어든다.
+   단계로 끊으면 ROYAL ENFIELD(13) 와 BMW MOTORRAD(12) 가 같은 칸에 묶여
+   어떤 브랜드는 헐렁하고 어떤 브랜드는 꽉 낀다.
+   --fit 은 렌더할 때 min(1, 5/글자수) 로 넣는다 — 다섯 자까지는 최대 크기, 그보다 길면 그만큼 줄인다.
+   한 줄을 유지해야 계산이 맞으므로 줄바꿈은 막는다. */
 .runbig .rw, .bstrip > span{
-  font:900 clamp(56px,19vw,96px)/.92 var(--sans);font-style:italic;
+  font:900 calc(var(--fit,1) * clamp(56px,19vw,96px))/.92 var(--sans);font-style:italic;
   letter-spacing:-.07em;text-transform:uppercase;
   transform:scaleX(1.06);transform-origin:center;
-  text-align:center;word-break:keep-all;
+  text-align:center;white-space:nowrap;
 }
-.runbig [data-len="2"]{font-size:clamp(34px,11.5vw,58px)}
-.runbig [data-len="3"]{font-size:clamp(24px,8vw,40px)}
-.runbig [data-len="4"]{font-size:clamp(18px,6vw,30px)}
 
 /* SHOP — 원은 가만히 있고 브랜드 이름만 좌우로 흐른다.
    원이 통째로 움직이면 시선이 따라다녀야 해서 어지럽다. 창은 고정, 내용만 넘긴다. */
@@ -1097,7 +1097,10 @@ const isLanding = () => ["c","d","s","gas","recent"].includes(mode)
 /* 원 안에 세울 말. SHOP 만 브랜드가 흐르므로 여기 없다.
    길이에 따라 글자를 줄이려고 단계를 함께 둔다. */
 const CIRCLE_WORD = {c: "RUN", s: "GEAR", gas: "GAS STATION", recent: "RECENT"};
-const wordStep = n => n > 12 ? 4 : n > 8 ? 3 : n > 5 ? 2 : 1;
+/* 다섯 자까지는 최대 크기, 그보다 길면 글자 수에 반비례해 줄인다.
+   RUN(3)·GEAR(4)·BRAND(5) 가 같은 크기로 서고,
+   BMW MOTORRAD(12) 는 0.42배, HARLEY-DAVIDSON(15) 은 0.33배가 된다. */
+const fitScale = n => Math.min(1, 5 / Math.max(1, n)).toFixed(3);
 
 function renderRunbar(){
   /* 지금 화면이 무엇을 고르는 자리인지에 따라 레일 내용이 달라진다.
@@ -1282,7 +1285,7 @@ function render(){
     if (mode === "d"){
       const names = ["BRAND", ...BRAND_SEQ.map(enOf)];
       inner = `<div class="bwin"><div class="bstrip" id="bstrip">`
-        + names.map(n => `<span class="rw" data-len="${wordStep(n.length)}">${esc(n)}</span>`).join("")
+        + names.map(n => `<span class="rw" style="--fit:${fitScale(n.length)}">${esc(n)}</span>`).join("")
         + `</div></div>`;
     } else if (mode === "c"){
       /* COFFEE 도 같은 방식 — 첫 칸은 RUN(담아 둔 곳), 그다음부터 권역이 흐른다.
@@ -1290,11 +1293,11 @@ function render(){
       const has = new Set(DATA.filter(r => r.k === "c").map(regionOf));
       const names = ["RUN", ...REGION_SEQ.filter(n => has.has(n))];
       inner = `<div class="bwin"><div class="bstrip" id="bstrip">`
-        + names.map(n => `<span class="rw" data-len="${wordStep(n.length)}">${esc(n)}</span>`).join("")
+        + names.map(n => `<span class="rw" style="--fit:${fitScale(n.length)}">${esc(n)}</span>`).join("")
         + `</div></div>`;
     } else {
       const w = CIRCLE_WORD[mode] || "RUN";
-      inner = `<span class="rw" data-len="${wordStep(w.length)}">${w}</span>`;
+      inner = `<span class="rw" style="--fit:${fitScale(w.length)}">${w}</span>`;
     }
     /* 날씨는 COFFEE 에서만. 나머지는 글자 하나로 끝내는 편이 원이 깔끔하다 —
        달리기 전에 하늘을 보는 건 카페로 갈 때다. */
