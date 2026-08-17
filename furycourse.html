@@ -249,8 +249,9 @@ h1 small{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.02em;
 .bdg.bm15{background:#0E3A5F;color:#7FD1E8}
 .bdg.bm16{background:#0F6E78;color:#FFFFFF}
 .nearbar{display:none;gap:6px;margin:0 0 10px}
-.nearbar.on{display:flex}
-.nearbar button{flex:1;font:600 12.5px/1 var(--sans);padding:9px 6px;border-radius:9px;
+.nearbar.on{display:flex;flex-wrap:wrap}
+/* 4종이라 좁은 화면에서는 두 줄로 접힌다 — 한 줄에 밀어 넣으면 글자가 눌린다 */
+.nearbar button{flex:1 1 22%;min-width:78px;font:600 12.5px/1 var(--sans);padding:9px 6px;border-radius:9px;
   cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--fg2)}
 .nearbar button[aria-pressed=true]{
   background:var(--sel-bg);border-color:var(--sel-line);color:var(--sel-fg);font-weight:700}
@@ -284,6 +285,7 @@ button:focus-visible,a:focus-visible,.tile:focus-visible{outline:2px solid var(-
   <div id="nearBar" class="nearbar">
     <button data-nk="c" aria-pressed="true">카페</button>
     <button data-nk="d" aria-pressed="false">정비·딜러</button>
+    <button data-nk="s" aria-pressed="false">용품점</button>
     <button data-nk="gas" aria-pressed="false">주유소</button>
   </div>
   <div id="modeSeg" class="seg"></div>
@@ -715,7 +717,7 @@ function render(){
   /* 필터 세그 */
   if (mode === "near"){
     $("#filterSeg").innerHTML = "";
-    const label = {c:"바이크 카페", d:"정비·딜러", gas:"주유소"}[nearKind];
+    const label = {c:"바이크 카페", d:"정비·딜러", s:"용품점", gas:"주유소"}[nearKind];
     if (!here){
       $("#crumbs").innerHTML = `<span>위치를 확인하는 중…</span>`;
       $("#screen").innerHTML = `<p class="empty">위치 접근을 허용하면 가까운 순으로 보여드립니다.</p>`;
