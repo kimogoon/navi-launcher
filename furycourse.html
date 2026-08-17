@@ -220,9 +220,11 @@ h1 small{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.02em;
    달리기 전에 알고 싶은 건 '어디로 갈까' 와 '지금 밖이 어떤가' 둘뿐이다. */
 .landing{display:flex;flex:1;min-height:0;flex-direction:column;align-items:center;
   justify-content:center;gap:10px;padding:0}
-/* 화면 폭을 거의 다 쓴다. 장갑 낀 손으로 눌러야 하고, 첫 화면에서 유일한 목적지다. */
+/* 화면 폭을 거의 다 쓴다. 장갑 낀 손으로 눌러야 하고, 첫 화면에서 유일한 목적지다.
+   높이는 --circle 로 정한다 — 남은 자리를 실제로 재서 넣는 값이다(fitCircle 참고).
+   dvh 로 잡으면 주소창이 보이는 사파리에서 원이 아래 로고를 덮는다. */
 .runbig{
-  width:min(88vw,420px,var(--circle,44dvh));aspect-ratio:1;border-radius:50%;border:0;cursor:pointer;
+  width:min(88vw,420px,var(--circle,40dvh));aspect-ratio:1;border-radius:50%;border:0;cursor:pointer;
   background:var(--on-bg);color:var(--on-fg);
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
   font-family:var(--sans);
@@ -541,6 +543,21 @@ const readLS = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d
    예전에는 눌렀을 때 카테고리가 카페로 초기화돼, 브랜드를 고른 게 날아갔다. */
 let nearOn = false;
 const NEAR_MAX = 60;          /* 가까운 순 이만큼만 — 그 너머는 '주변'이 아니다 */
+
+/* 원 크기는 남은 자리를 실제로 재서 정한다.
+   dvh 로 잡으면 주소창이 보이는 사파리에서 헤더가 두 줄로 접힐 때 자리가 모자라
+   원이 아래 로고를 덮어 버린다. 화면(#screen)이 실제로 차지한 높이에서
+   링 테두리와 안쪽 여백을 빼면 원이 들어갈 수 있는 최대 지름이 나온다. */
+const RING_PAD = 24;          /* 링 테두리 2 + 안쪽 여백 10, 위아래 합쳐서 */
+function fitCircle(){
+  const sc = document.getElementById("screen");
+  if (!sc) return;
+  const d = Math.max(0, Math.round(sc.clientHeight - RING_PAD));
+  if (!d) return;
+  const now = document.documentElement.style.getPropertyValue("--circle");
+  if (now === d + "px") return;               /* 같은 값이면 건드리지 않는다 */
+  document.documentElement.style.setProperty("--circle", d + "px");
+}
 let pins = new Set(readLS(PIN_KEY, []));
 let recent = readLS(RECENT_KEY, []);
 const savePins = () => localStorage.setItem(PIN_KEY, JSON.stringify([...pins]));
@@ -1249,6 +1266,7 @@ function render(){
   $("#crumbs").innerHTML = q ? `<span>"${esc(q)}" 검색 결과</span>` : cr.join(" ");
 
   const screen = $("#screen");
+  fitCircle();
 
   if (isLanding()){
     /* 첫 화면은 카테고리마다 할 일이 다르다.
@@ -1598,6 +1616,16 @@ const head = document.querySelector(".head");
 const onScroll = () => head.classList.toggle("stuck", window.scrollY > 4);
 addEventListener("scroll", onScroll, {passive:true});
 onScroll();
+
+/* 주소창이 나타나거나 사라지면, 화면을 돌리면, 헤더가 한 줄에서 두 줄로 접히면
+   원이 들어갈 자리가 달라진다. 그때마다 다시 잰다. */
+addEventListener("resize", fitCircle);
+addEventListener("orientationchange", fitCircle);
+visualViewport?.addEventListener("resize", fitCircle);
+/* 자리가 실제로 달라지는 건 #screen 이다 — 헤더가 접혀도, 주소창이 사라져도 여기가 변한다.
+   #screen 은 flex:1·min-height:0 이라 높이가 바깥에서 정해진다. 원을 키워도 되밀지 않으니
+   관찰해도 되돌이표가 생기지 않는다. */
+new ResizeObserver(fitCircle).observe(document.getElementById("screen"));
 
 render();
 </script>
