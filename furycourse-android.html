@@ -1284,6 +1284,14 @@ function render(){
       inner = `<div class="bwin"><div class="bstrip" id="bstrip">`
         + names.map(n => `<span class="rw" data-len="${wordStep(n.length)}">${esc(n)}</span>`).join("")
         + `</div></div>`;
+    } else if (mode === "c"){
+      /* COFFEE 도 같은 방식 — 첫 칸은 RUN(담아 둔 곳), 그다음부터 권역이 흐른다.
+         지역을 고르러 목록까지 들어갔다 나올 이유가 없다. */
+      const has = new Set(DATA.filter(r => r.k === "c").map(regionOf));
+      const names = ["RUN", ...REGION_SEQ.filter(n => has.has(n))];
+      inner = `<div class="bwin"><div class="bstrip" id="bstrip">`
+        + names.map(n => `<span class="rw" data-len="${wordStep(n.length)}">${esc(n)}</span>`).join("")
+        + `</div></div>`;
     } else {
       const w = CIRCLE_WORD[mode] || "RUN";
       inner = `<span class="rw" data-len="${wordStep(w.length)}">${w}</span>`;
@@ -1353,16 +1361,26 @@ $("#crumbs").addEventListener("click", e => {
 $("#screen").addEventListener("click", e => {
   if (e.target.closest("#runbig")){
     pushHist();
+    const st = $("#bstrip");
+    const idx = st ? Math.round(st.scrollLeft / st.clientWidth) : 0;
     if (mode === "d"){
       /* 원 안에서 가운데에 와 있는 브랜드를 고른다 — 첫 칸(BRAND)은 '전체' 다 */
-      const st = $("#bstrip");
-      const i = st ? Math.round(st.scrollLeft / st.clientWidth) : 0;
-      brand = i === 0 ? null : BRAND_SEQ[i - 1];
+      brand = idx === 0 ? null : BRAND_SEQ[idx - 1];
       filter = "ALL";
       if (!brand) region = null;
     } else if (mode === "c"){
-      if (!pins.size){ alert("카드의 ☆ 를 눌러 PIN 에 담아보세요."); HIST.pop(); return; }
-      mode = "pin";                       /* 커피는 담아 둔 곳부터 */
+      if (idx > 0){
+        /* 권역을 골랐다 */
+        const has = new Set(DATA.filter(r => r.k === "c").map(regionOf));
+        region = REGION_SEQ.filter(n => has.has(n))[idx - 1] || null;
+      } else if (pins.size){
+        mode = "pin";                     /* RUN — 담아 둔 곳부터 */
+      } else if (recent.length){
+        mode = "recent";                  /* 담아 둔 게 없으면 최근 본 곳 */
+        forceList = true;
+      } else {
+        forceList = true;                 /* 둘 다 없으면 그냥 전체 목록 */
+      }
     } else if (mode === "gas"){
       mode = "near"; nearKind = "gas";    /* 주유소는 가까운 곳이 전부다 */
       nearBar.classList.add("on");
