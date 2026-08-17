@@ -1071,7 +1071,8 @@ function render(){
   }
   if (mode === "pin" || mode === "recent"){
     $("#filterSeg").innerHTML = "";
-    $("#crumbs").innerHTML = `<span>${mode === "pin" ? "PIN" : "RECENT"}</span>`;
+    $("#crumbs").innerHTML = `<span>${mode === "pin" ? "PIN" : "RECENT"}</span>`
+      + ` <button data-lv="0">전체 보기</button>`;
     $("#screen").innerHTML = rows.length
       ? `<div class="list">${rows.map(r => card(r, DATA.indexOf(r))).join("")}</div>`
       : `<p class="empty">${mode === "pin" ? "카드의 ☆ 를 눌러 PIN 에 담아보세요." : "아직 열어본 곳이 없습니다."}</p>`;
@@ -1161,7 +1162,8 @@ $("#filterSeg").addEventListener("click", e => {
 $("#crumbs").addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
   pushHist();
-  if (b.dataset.lv === "1"){ brand = null; filter = "ALL"; }   /* 브랜드 고르기로 되돌아간다 */
+  if (b.dataset.lv === "0"){ mode = "c"; brand = region = null; filter = "ALL"; }  /* PIN·RECENT 에서 빠져나온다 */
+  else if (b.dataset.lv === "1"){ brand = null; filter = "ALL"; }   /* 브랜드 고르기로 되돌아간다 */
   render();
 });
 $("#screen").addEventListener("click", e => {
@@ -1383,6 +1385,11 @@ qReset.addEventListener("click", () => {
 
 /* 목록이 헤더 밑으로 들어가면 경계선을 켠다. 선이 늘 있으면 화면이 답답하고,
    없으면 카드가 헤더에 붙어 잘린 것처럼 보인다. */
+/* 담아 둔 곳이 있으면 그걸 먼저 보여준다.
+   매번 전국 목록에서 내 가게를 다시 찾게 만들 이유가 없다.
+   카테고리 칩이나 제목을 누르면 바로 빠져나온다. */
+if (pins.size) mode = "pin";
+
 const head = document.querySelector(".head");
 const onScroll = () => head.classList.toggle("stuck", window.scrollY > 4);
 addEventListener("scroll", onScroll, {passive:true});
