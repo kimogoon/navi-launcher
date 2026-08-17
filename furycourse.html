@@ -5,6 +5,13 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="COFFEE RUN">
 <meta name="theme-color" content="#101014">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="전국 바이크 카페와 정비·딜러망을 한 화면에서 찾고 바로 길안내로 넘긴다.">
+<!-- 홈화면 추가용 아이콘. 이게 없으면 iOS 가 페이지 스크린샷을 축소해 아이콘으로 쓴다 -->
+<link rel="apple-touch-icon" href="./coffee-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="./coffee-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="./coffee-512.png">
+<link rel="manifest" href="./coffee.webmanifest">
 <title>COFFEE RUN</title>
 <style>
 :root{
@@ -718,9 +725,14 @@ function render(){
   const screen = $("#screen");
   if (!rows.length){ screen.innerHTML = `<p class="empty">해당하는 곳이 없습니다.</p>`; return; }
 
-  /* 검색·시군구까지 좁혀졌거나 결과가 적으면 목록, 아니면 타일 */
+  /* 검색·시군구까지 좁혀졌거나 결과가 적으면 목록, 아니면 타일.
+
+     위치를 한 번 잡았다는 이유로 목록으로 바꾸지 않는다. 예전에는 here 가 있으면
+     무조건 목록이라, '내 주변'을 한 번 쓰고 나면 그 뒤로 지역·브랜드 타일이
+     통째로 사라졌다 — 제목을 눌러 처음으로 돌아가도 돌아오지 않았다.
+     가까운 순으로 보고 싶으면 '내 주변'이 그 일을 한다. 위치는 카드의 거리 표시에만 쓴다. */
   const drilled = mode === "d" ? (brand && sido) : !!gu;
-  if (q || drilled || rows.length <= 24 || here){
+  if (q || drilled || rows.length <= 24){
     const sorted = here ? [...rows].sort((a,b) => (dist(a) ?? 9e9) - (dist(b) ?? 9e9)) : rows;
     screen.innerHTML = `<div class="list">${sorted.map((r,i)=>card(r,DATA.indexOf(r))).join("")}</div>`;
     return;
