@@ -172,22 +172,26 @@ h1 small{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.02em;
    지역을 격자로 깔면 카테고리를 바꿀 때마다 화면 절반이 타일로 찬다.
    버튼 하나로 접어 두고, 열면 큰 카드가 좌우로 흐른다.
    장갑 낀 손으로도 누를 수 있게 카드를 크게 잡았다. */
+/* 카테고리 칩과 같은 알약 모양 · 같은 글꼴. 폭만 전체를 쓴다 —
+   이 줄이 '지금 무엇을 고르는 중인가' 를 말하는 자리라 가장 크다. */
+/* 글자와 화살표를 가운데에 한 덩어리로 붙인다.
+   양끝으로 벌려 놓으면 가운데가 텅 비어 버튼 하나가 아니라 빈 바처럼 보인다. */
 .runbtn{
-  width:100%;display:flex;align-items:center;gap:10px;
-  padding:13px 16px;border-radius:13px;cursor:pointer;
-  border:1px solid var(--line);background:var(--surface);color:var(--fg);
-  font:900 17px/1 var(--sans);font-style:italic;letter-spacing:-.02em;
-  text-align:left;
+  width:100%;display:flex;align-items:center;justify-content:center;gap:10px;
+  padding:19px 20px;border-radius:999px;cursor:pointer;
+  border:0;background:var(--on-bg);color:var(--on-fg);
+  font:900 24px/1 var(--sans);font-style:italic;letter-spacing:-.045em;
+  text-transform:uppercase;
 }
-.runbtn .rl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.runbtn .rn{font:700 12px/1 var(--sans);font-style:normal;color:var(--fg3);
-  letter-spacing:0;font-variant-numeric:tabular-nums;flex:none}
-.runbtn .rc{flex:none;width:11px;height:11px;border-right:2.4px solid var(--fg3);
-  border-bottom:2.4px solid var(--fg3);transform:rotate(45deg) translate(-2px,-2px);
-  transition:transform .18s ease}
-.runbtn[aria-expanded=true]{background:var(--on-bg);color:var(--on-fg);border-color:transparent}
-.runbtn[aria-expanded=true] .rn{color:var(--on-fg);opacity:.6}
-.runbtn[aria-expanded=true] .rc{border-color:var(--on-fg);
+.runbtn:active{opacity:.82}
+.runbtn .rl{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:0 1 auto}
+.runbtn .rc{flex:none;width:11px;height:11px;border-right:3px solid var(--on-fg);
+  border-bottom:3px solid var(--on-fg);transform:rotate(45deg) translate(-2px,-2px);
+  transition:transform .18s ease;opacity:.75}
+/* 펼치면 뒤집는다 — 지금 고르는 중이라는 표시. 채운 버튼이라 색을 빼는 쪽이 눈에 띈다 */
+.runbtn[aria-expanded=true]{background:transparent;color:var(--fg);
+  box-shadow:inset 0 0 0 2px var(--fg)}
+.runbtn[aria-expanded=true] .rc{border-color:var(--fg);
   transform:rotate(-135deg) translate(-3px,-3px)}
 
 /* 좌우 스크롤 — 카드가 화면 한가운데에 딱 멈춘다.
@@ -202,11 +206,14 @@ h1 small{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.02em;
   border:1px solid var(--line);border-radius:15px;background:var(--surface);
   color:var(--fg);cursor:pointer;font-family:var(--sans);
   transition:border-color .15s ease, background .15s ease}
-.rcard b{font:900 23px/1.1 var(--sans);letter-spacing:-.03em;text-align:center;word-break:keep-all}
-.rcard span{font:700 13px/1 var(--sans);color:var(--fg3);font-variant-numeric:tabular-nums}
+.rcard b{font:900 24px/1.1 var(--sans);font-style:italic;letter-spacing:-.035em;
+  text-align:center;word-break:keep-all;padding:0 10px}
+/* 브랜드 카드는 제조사 색을 그대로 입는다 — 글자만으로도 어느 브랜드인지 바로 안다 */
+.rcard.rbrand b{font-size:20px}
+.rcard.rbrand[aria-current=true]{box-shadow:inset 0 0 0 3px var(--on-bg)}
 .rcard[aria-current=true]{background:var(--on-bg);border-color:transparent}
 .rcard[aria-current=true] b{color:var(--on-fg)}
-.rcard[aria-current=true] span{color:var(--on-fg);opacity:.65}
+.rcard.rbrand[aria-current=true] b{color:inherit}
 .rcard:active{border-color:var(--fg3)}
 @media (prefers-reduced-motion:reduce){.rail{scroll-behavior:auto}.runbtn .rc{transition:none}}
 .tiles{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(104px,1fr))}
@@ -231,6 +238,10 @@ h1 small{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.02em;
 .tile-region b{font-size:18px;letter-spacing:-.02em}
 .tile span{font-size:11.5px;color:var(--fg3);font-variant-numeric:tabular-nums}
 .list{display:flex;flex-direction:column;gap:8px}
+.more{width:100%;margin-top:10px;padding:14px;border-radius:12px;cursor:pointer;
+  border:1px dashed var(--line);background:transparent;color:var(--fg2);
+  font:800 14px/1 var(--sans);font-style:italic;letter-spacing:-.02em}
+.more:active{background:var(--raised)}
 .card{border:1px solid var(--line);background:var(--surface);border-radius:12px;overflow:hidden}
 .card-head{display:flex;gap:10px;padding:13px 14px;cursor:pointer;align-items:flex-start}
 /* 왼쪽 색 막대 = 지금 문이 열려 있는가.
@@ -453,6 +464,8 @@ let mode = "c";          // c=카페 d=정비·딜러
    딜러가 1,137곳이라 지역만으로 나누면 한 타일에 수십 곳이 몰린다. */
 let brand = null, region = null, filter = "ALL", q = "";
 let railOpen = false;   /* RUN 레일이 펼쳐져 있는가 */
+const LIST_STEP = 300;                    /* 한 번에 그리는 카드 수 */
+let listLimit = LIST_STEP, listSig = "";
 /* PIN·RECENT — 길안내 런처의 '최근 검색'과 같은 방식으로 localStorage 에 둔다.
    저장하는 건 검색어가 아니라 '고른 장소의 키'라 다시 찾을 필요가 없다. */
 const PIN_KEY = "furycourse.pins.v1", RECENT_KEY = "furycourse.recent.v1", RECENT_MAX = 8;
@@ -660,7 +673,9 @@ function openState(r, now){
 function badges(r){
   const b = [];
   if (r.cl) b.push(["wn","폐업 의심"]);
-  if (mode === "c"){
+  /* 화면 모드가 아니라 카드 종류로 가른다.
+     '내 주변'(mode="near")에서는 카페가 딜러 가지로 떨어져 빈 등급 칸이 생겼다. */
+  if (r.k === "c"){
     if (r.meal) b.push(["ok","식사 가능"]);
     if (r.cat) b.push(["", r.cat]);
     if (r.rv != null) b.push(["", "리뷰 " + r.rv.toLocaleString()]);
@@ -676,7 +691,8 @@ function badges(r){
        고른 뒤에는 그 브랜드의 등급만 — 다른 브랜드 등급까지 붙으면 읽기 어렵다. */
     const bl = brandsOf(r);
     if (!brand) bl.forEach(b2 => b.push(["", enOf(b2)]));
-    b.push(["", gradeFor(r, brand || bl[0])]);
+    const gd = gradeFor(r, brand || bl[0]);
+    if (gd) b.push(["", gd]);           /* 등급을 모르면 빈 칸을 만들지 않는다 */
     if (brand && bl.length > 1)
       b.push(["", "+ " + bl.filter(x => x !== brand).map(enOf).join(" · ")]);
   }
@@ -868,8 +884,30 @@ function panel(r){
   </div>`;
 }
 
+/* 주유소 길안내는 이름으로 보낸다.
+   오피넷은 지점으로부터의 거리만 주고 주유소 좌표는 주지 않는다 —
+   그래서 gasPool 이 가까운 지점의 좌표를 빌려 쓰고 있다.
+   그 좌표로 안내하면 주유소가 아니라 그 카페·정비소로 데려간다.
+   동명 주유소가 많으므로(재정주유소만 여러 곳) 시군구를 앞에 붙여 검색어를 만든다. */
+function gasNav(g){
+  const q = encodeURIComponent(`${g.gu || g.sido || ""} ${g.name}`.trim());
+  if (PLATFORM === "android"){
+    return `<div class="btns">
+      <a class="n-tmap"  href="${intent(`search?name=${q}`, "tmap", PKG.tmap)}">T맵으로 안내</a>
+      <button class="n-kakao" data-clip="${esc(g.name)}" data-navi="${intent("navigate", "kakaonavi", PKG.knavi)}">카카오내비 (이름 복사)</button>
+      <a class="n-naver" href="${intent(`search?query=${q}&appname=coffeerun`, "nmap", PKG.naver)}">네이버지도로 안내</a>
+    </div>`;
+  }
+  return `<div class="btns">
+    <a class="n-tmap"  href="tmap://search?name=${q}">T맵으로 안내</a>
+    <button class="n-kakao" data-clip="${esc(g.name)}">카카오내비 (이름 복사)</button>
+    <a class="n-naver" href="https://m.map.naver.com/launchApp/search?query=${q}`
+    + `&appname=${encodeURIComponent("https://kimogoon.github.io/navi-launcher/furycourse.html")}">네이버지도로 안내</a>
+  </div>`;
+}
+
 function gasCard(g){
-  const d = dist(g), enc = encodeURIComponent(g.name);
+  const d = dist(g);
   const b = [];
   if (g.g)  b.push(["", "휘발유 " + g.g.toLocaleString()]);
   if (g.pg) b.push(["fu", "고급유" + (g.pp ? " " + g.pp.toLocaleString() : "")]);
@@ -884,12 +922,7 @@ function gasCard(g){
       </div>
       ${d != null ? `<span class="dist">${d < 1 ? Math.round(d*1000)+"m" : d.toFixed(1)+"km"}</span>` : ""}
     </div>
-    <div class="panel" style="display:flex">
-      <div class="btns">
-        <a class="n-tmap"  href="tmap://route?rGoName=${enc}&rGoX=${g.lon}&rGoY=${g.lat}">T맵으로 안내</a>
-        <a class="n-kmap"  href="https://applink.map.kakao.com/route?sp=&sn=&ep=${g.lat}%2C${g.lon}&en=${enc}&by=car">카카오맵 길안내</a>
-      </div>
-    </div></article>`;
+    <div class="panel" style="display:flex">${gasNav(g)}</div></article>`;
 }
 
 function card(r, i){
@@ -913,29 +946,58 @@ function card(r, i){
    지역을 격자로 깔면 카테고리를 바꿀 때마다 화면 절반이 타일로 찬다.
    버튼 하나로 접어 두고, 열면 큰 카드가 좌우로 흐르며 가운데에 딱 멈춘다. */
 function renderRunbar(){
+  /* 지금 화면이 무엇을 고르는 자리인지에 따라 레일 내용이 달라진다.
+       SHOP 에서 브랜드를 고르기 전 → 브랜드
+       그 밖에는                   → 지역
+     '내 주변'·PIN·RECENT·집 처럼 고를 것이 없는 화면에서는 버튼을 감춘다.
+     예전에는 mode 로 DATA 를 걸러 base 가 비는 바람에 '0곳' 이 떴다. */
+  const box = $("#runbar");
+  if (mode === "near" || mode === "pin" || mode === "recent" || mode === "home"){
+    box.innerHTML = ""; return;
+  }
+  const brandPick = mode === "d" && !brand;
   const base = mode === "gas" ? gasPool()
              : mode === "d"   ? DATA.filter(r => r.k === "d" && (!brand || hasBrand(r, brand)))
              : DATA.filter(r => r.k === mode);
-  const cnt = new Map();
-  base.forEach(r => { const v = regionOf(r); cnt.set(v, (cnt.get(v)||0)+1); });
-  const items = [["전국", base.length], ...REGION_SEQ.filter(n => cnt.get(n)).map(n => [n, cnt.get(n)])];
-  const cur = region || "전국";
 
-  const label = region ? `RUN · ${region}` : "RUN";
+  let items, cur;
+  if (brandPick){
+    items = [["전체 브랜드", null], ...BRAND_SEQ
+      .filter(bn => base.some(r => hasBrand(r, bn)))
+      .map(bn => [enOf(bn), bn])];
+    cur = "전체 브랜드";
+  } else {
+    const has = new Set(base.map(regionOf));
+    items = [["전국", null], ...REGION_SEQ.filter(n => has.has(n)).map(n => [n, n])];
+    cur = region || "전국";
+  }
+
+  /* 지금까지 고른 것을 그대로 잇는다 — YAMAHA · 경기 */
+  const parts = [];
+  if (mode === "d" && brand) parts.push(enOf(brand));
+  if (region) parts.push(region);
+  const label = parts.length ? parts.join(" · ") : "RUN";
   const btn = `<button class="runbtn" id="runbtn" type="button" aria-expanded="${railOpen}">`
     + `<span class="rl">${esc(label)}</span>`
-    + `<span class="rn">${(cnt.get(region) ?? base.length).toLocaleString()}곳</span>`
     + `<span class="rc" aria-hidden="true"></span></button>`;
 
   const rail = railOpen
-    ? `<div class="rail" id="rail" role="listbox" aria-label="지역">`
-      + items.map(([n, c]) => `<button class="rcard" role="option" data-r="${esc(n)}"`
-          + ` aria-current="${n === cur}"><b>${esc(n)}</b><span>${c.toLocaleString()}곳</span></button>`).join("")
+    ? `<div class="rail" id="rail" role="listbox" aria-label="${brandPick ? "브랜드" : "지역"}">`
+      + items.map(([lab, val]) => {
+          const on = brandPick ? (val === brand || (!brand && val === null))
+                               : ((val || "전국") === cur);
+          const col = brandPick && val ? BRAND_COLOR[val] : null;
+          const st = col ? ` style="background:${col[0]};border-color:transparent"` : "";
+          const tc = col ? ` style="color:${col[1]}"` : "";
+          return `<button class="rcard${col ? " rbrand" : ""}" role="option"`
+            + ` data-v="${esc(val === null ? "" : val)}" aria-current="${on}"${st}>`
+            + `<b${tc}>${esc(lab)}</b></button>`;
+        }).join("")
       + `</div>`
     : "";
-  $("#runbar").innerHTML = btn + rail;
+  box.innerHTML = btn + rail;
 
-  /* 열자마자 지금 고른 지역이 가운데 보이게 — 매번 맨 앞부터 찾게 만들지 않는다 */
+  /* 열자마자 지금 고른 것이 가운데 보이게 — 매번 맨 앞부터 찾게 만들지 않는다 */
   if (railOpen){
     const sel = $(`#rail .rcard[aria-current=true]`);
     if (sel) sel.scrollIntoView({inline:"center", block:"nearest"});
@@ -964,6 +1026,9 @@ function render(){
   }
 
   /* 모드 세그 */
+  /* 내 주변에는 자체 카테고리 줄(nearBar)이 있다. 둘 다 알약 모양이라 나란히 두면
+     같은 줄이 두 개 있는 것처럼 보인다 — 내 주변일 때는 카테고리 칩을 감춘다. */
+  $("#modeSeg").style.display = mode === "near" ? "none" : "";
   const modeCount = v => v === "gas" ? gasPool().length : DATA.filter(r => r.k === v).length;
   /* 카테고리 이름은 영문 한 단어로. 칩이 여섯 개라 한글 네 글자씩 붙으면 두 줄로 접힌다.
      판매·정비·부품·전시가 한데 있는 자리라 SHOP 으로 묶는다. */
@@ -971,7 +1036,8 @@ function render(){
     .filter(([v]) => modeCount(v) > 0)
     .map(([v,l]) =>
     `<button data-m="${v}" aria-pressed="${mode===v}">${l}<span class="n">${modeCount(v)}</span></button>`).join("")
-    + (pins.size ? `<button data-m="pin" aria-pressed="${mode==="pin"}">★ PIN<span class="n">${pins.size}</span></button>` : "")
+    /* PIN 칩은 두지 않는다 — 바로 아래 퀵바의 PIN 버튼과 같은 일을 한다.
+       같은 기능이 화면에 둘이면 어느 쪽이 무엇인지 헷갈린다. */
     + (recent.length ? `<button data-m="recent" aria-pressed="${mode==="recent"}">RECENT<span class="n">${recent.length}</span></button>` : "");
 
   /* 필터 세그 */
@@ -984,7 +1050,7 @@ function render(){
       return;
     }
     const sorted = [...rows].sort((a,b) => (dist(a) ?? 9e9) - (dist(b) ?? 9e9)).slice(0, 60);
-    $("#crumbs").innerHTML = `<span>내 주변 ${label} · 가까운 순 ${sorted.length}곳</span>`;
+    $("#crumbs").innerHTML = `<span>내 주변 ${label} · 가까운 순</span>`;
     $("#screen").innerHTML = sorted.length
       ? `<div class="list">${sorted.map(r => nearKind === "gas" ? gasCard(r) : card(r, DATA.indexOf(r))).join("")}</div>`
       : `<p class="empty">주변에 표시할 곳이 없습니다.</p>`;
@@ -997,7 +1063,7 @@ function render(){
   }
   if (mode === "pin" || mode === "recent"){
     $("#filterSeg").innerHTML = "";
-    $("#crumbs").innerHTML = `<span>${mode === "pin" ? "PIN" : "RECENT"} ${rows.length}곳</span>`;
+    $("#crumbs").innerHTML = `<span>${mode === "pin" ? "PIN" : "RECENT"}</span>`;
     $("#screen").innerHTML = rows.length
       ? `<div class="list">${rows.map(r => card(r, DATA.indexOf(r))).join("")}</div>`
       : `<p class="empty">${mode === "pin" ? "카드의 ☆ 를 눌러 PIN 에 담아보세요." : "아직 열어본 곳이 없습니다."}</p>`;
@@ -1039,31 +1105,37 @@ function render(){
   }
 
   /* 경로 — 지금 어디를 보고 있는지 한 줄. 되돌아가기는 RUN 버튼과 뒤로 버튼이 맡는다. */
+  /* 곳 수는 적지 않는다 — 위 칩에 이미 있고, 목록을 보면 보인다 */
   const cr = [];
-  if (mode === "d") cr.push(brand
-    ? `<button data-lv="1">${badge(brand, true)} ${esc(enOf(brand))}</button>`
-    : `<span>브랜드를 고르세요</span>`);
-  cr.push(`<span>${region || "전국"} ${rows.length}곳</span>`);
+  if (mode === "d" && brand)
+    cr.push(`<button data-lv="1">${badge(brand, true)} ${esc(enOf(brand))}</button>`);
+  if (region) cr.push(`<span>${esc(region)}</span>`);
   if (mode === "gas") cr.push(`<span class="cov">아직 일부 지역만 — 매일 채워집니다</span>`);
-  $("#crumbs").innerHTML = q ? `<span>"${esc(q)}" 검색 결과 ${rows.length}곳</span>` : cr.join(" ");
+  $("#crumbs").innerHTML = q ? `<span>"${esc(q)}" 검색 결과</span>` : cr.join(" ");
 
   const screen = $("#screen");
   if (!rows.length){ screen.innerHTML = `<p class="empty">해당하는 곳이 없습니다.</p>`; return; }
 
-  /* 브랜드를 고르기 전의 SHOP 만 타일이고, 나머지는 전부 목록이다.
-     지역은 위쪽 RUN 레일에서 고른다 — 화면 절반을 지역 타일로 채우지 않는다.
+  /* 화면은 언제나 목록이다. 브랜드도 지역도 위쪽 RUN 레일에서 고른다 —
+     격자로 깔면 카테고리를 옮길 때마다 화면 절반이 타일로 찬다.
 
      위치를 한 번 잡았다는 이유로 정렬을 바꾸지 않는다. 예전에는 here 가 있으면
      무조건 거리순이라 '내 주변'을 한 번 쓰고 나면 그 뒤로 순서가 계속 흐트러졌다.
      가까운 순으로 보고 싶으면 '내 주변'이 그 일을 한다. */
-  if (mode === "d" && !brand && !q && !region){
-    const tiles = countBy(rows, "brand").filter(([v]) => v && v !== "기타");
-    screen.innerHTML = `<div class="tiles tiles-wide">${tiles.map(([v,n]) => brandTile(v,n)).join("")}</div>`;
-    return;
-  }
   const sorted = here ? [...rows].sort((a,b) => (dist(a) ?? 9e9) - (dist(b) ?? 9e9)) : rows;
-  screen.innerHTML = `<div class="list">${sorted.map(r =>
-    r.k === "g" ? gasCard(r) : card(r, DATA.indexOf(r))).join("")}</div>`;
+
+  /* 브랜드도 지역도 안 고른 SHOP 은 1,334장이다 — 한 번에 그리면 DOM 이 1만 9천 노드가 되고
+     폰에서 첫 그리기가 눈에 띄게 밀린다. 끊어서 그리고 눌러서 이어 붙인다.
+     고른 것이 바뀌면(카테고리·브랜드·지역·필터·검색) 다시 처음부터. */
+  const sg = `${mode}|${brand}|${region}|${filter}|${q}|${nearKind}`;
+  if (sg !== listSig){ listSig = sg; listLimit = LIST_STEP; }
+  const shown = sorted.slice(0, listLimit);
+  const more = sorted.length - shown.length;
+
+  screen.innerHTML = `<div class="list">${shown.map(r =>
+      r.k === "g" ? gasCard(r) : card(r, DATA.indexOf(r))).join("")}</div>`
+    + (more > 0 ? `<button class="more" id="moreBtn" type="button">`
+        + `${more.toLocaleString()}곳 더 보기</button>` : "");
 }
 
 /* ── 이벤트 ── */
@@ -1090,6 +1162,11 @@ $("#screen").addEventListener("click", e => {
     pushHist();
     brand = tile.dataset.v; filter = "ALL";      /* 화면에 남은 타일은 브랜드뿐이다 */
     render(); return;
+  }
+  if (e.target.closest("#moreBtn")){
+    listLimit += LIST_STEP;
+    const sig = listSig; render(); listSig = sig;   /* 이어 붙이기지 새 목록이 아니다 */
+    return;
   }
   const clip = e.target.closest("[data-clip]");
   if (clip){
@@ -1200,9 +1277,10 @@ $("#runbar").addEventListener("click", e => {
   const rc = e.target.closest(".rcard");
   if (rc){
     pushHist();
-    const v = rc.dataset.r;
-    region = (v === "전국") ? null : v;
-    railOpen = false;                     /* 고르면 접힌다 — 목록을 보러 온 것이지 지역을 보러 온 게 아니다 */
+    const v = rc.dataset.v || null;
+    if (mode === "d" && !brand) { brand = v; filter = "ALL"; }
+    else region = v;
+    railOpen = false;      /* 고르면 접힌다 — 목록을 보러 온 것이지 고르는 화면을 보러 온 게 아니다 */
     render();
     return;
   }
