@@ -109,6 +109,7 @@ h1 small{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.02em;
 .home-setup .go{font:700 14px/1 var(--sans);padding:13px;border-radius:10px;cursor:pointer;
   border:1px solid var(--line);background:var(--raised);color:var(--fg)}
 .home-setup .go.pri{background:var(--on-bg);color:var(--on-fg);border-color:transparent}
+.panel .hint{margin:0;font-size:12px;line-height:1.55;color:var(--fg3)}
 .home-edit{align-self:flex-start;border:0;background:transparent;padding:4px 0;cursor:pointer;
   color:var(--fg2);font:600 12.5px/1 var(--sans);text-decoration:underline;text-underline-offset:3px}
 .tiles{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(104px,1fr))}
@@ -503,12 +504,15 @@ function navButtons(r){
 }
 
 /* 집은 주소만 등록할 수도 있다 — 좌표가 없으면 '검색어로 목적지 지정' 방식으로 보낸다.
-   T맵·네이버는 스킴뿐이라 iOS 확인창이 뜨고, 카카오맵·Apple·구글은 https 라 바로 열린다. */
+   네이버는 스킴(nmap://)을 쓰면 확인창이 뜬다. AASA 의 /launchApp/* 는 좌표 없는
+   search 도 덮으므로 여기서도 유니버설 링크를 쓴다 — 일반 카드와 같은 조건이 된다.
+   T맵은 AASA 자체가 없어(2026-08-17 재확인, 404) 확인창을 없앨 방법이 없다. */
 function navButtonsAddr(dest){
   const q = encodeURIComponent(dest);
   return `<div class="btns">
     <a class="n-tmap"  href="tmap://search?name=${q}">T맵으로 안내</a>
-    <a class="n-naver" href="nmap://search?query=${q}&appname=coffeerun">네이버지도로 안내</a>
+    <a class="n-naver" href="https://m.map.naver.com/launchApp/search?query=${q}`
+    + `&appname=${encodeURIComponent("https://kimogoon.github.io/navi-launcher/furycourse.html")}">네이버지도로 안내</a>
     <button class="n-kakao" data-clip="${esc(dest)}">카카오내비 (주소 복사)</button>
     <a class="n-kmap"  href="https://applink.map.kakao.com/?q=${q}">카카오맵에서 찾기</a>
     <a class="n-apple" href="https://maps.apple.com/?daddr=${q}&dirflg=d">Apple 지도로 안내</a>
@@ -558,6 +562,11 @@ function homeScreen(){
       <div class="panel">
         ${Number.isFinite(home.lat) ? navButtons({name:"집", addr:home.addr||"집", lat:home.lat, lon:home.lon})
                                     : navButtonsAddr(dest)}
+        <p class="hint">T맵과 카카오내비는 iOS가 띄우는 "열겠습니까?" 확인을 한 번 거칩니다.
+          웹에서 끌 수 없는 시스템 창이라 두 앱은 어쩔 수 없습니다.
+          네이버지도·카카오맵·Apple·구글은 확인창 없이 바로 열립니다.</p>
+        ${Number.isFinite(home.lat) ? "" :
+          `<button class="home-edit" id="homeHere" type="button">집 앞이라면 · 지금 위치로 좌표 채우기</button>`}
         <button class="home-edit" id="homeReset" type="button">집 다시 등록하기</button>
       </div>
     </article>`;
@@ -865,8 +874,10 @@ $("#screen").addEventListener("click", e => {
     const btn = e.target.closest("#homeHere");
     btn.disabled = true; btn.textContent = "위치를 확인하는 중…";
     navigator.geolocation.getCurrentPosition(
-      pos => { saveHome({lat: pos.coords.latitude, lon: pos.coords.longitude,
-                         addr: (document.getElementById("homeAddr") || {}).value || ""});
+      pos => { const typed = (document.getElementById("homeAddr") || {}).value || "";
+               /* 이미 등록된 집에 좌표만 채우는 경우가 있다 — 주소를 지우지 않는다 */
+               saveHome({lat: pos.coords.latitude, lon: pos.coords.longitude,
+                         addr: typed || (home && home.addr) || ""});
                render(); },
       () => { btn.disabled = false; btn.textContent = "지금 있는 곳을 집으로 저장";
               alert("위치 접근이 거부되었습니다. 주소를 직접 적어주세요."); },
