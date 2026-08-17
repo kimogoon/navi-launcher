@@ -216,6 +216,48 @@ h1 small{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.02em;
 .rcard.rbrand[aria-current=true] b{color:inherit}
 .rcard:active{border-color:var(--fg3)}
 @media (prefers-reduced-motion:reduce){.rail{scroll-behavior:auto}.runbtn .rc{transition:none}}
+/* ── 첫 화면 ──────────────────────────────────────────
+   목록을 깔지 않는다. 큰 원 하나와 날씨, 그리고 담아 둔 곳만.
+   달리기 전에 알고 싶은 건 '어디로 갈까' 와 '지금 밖이 어떤가' 둘뿐이다. */
+.landing{display:flex;flex-direction:column;align-items:center;gap:14px;padding:2px 0 4px}
+/* 화면 폭을 거의 다 쓴다. 장갑 낀 손으로 눌러야 하고, 첫 화면에서 유일한 목적지다. */
+.runbig{
+  width:min(88vw,420px);aspect-ratio:1;border-radius:50%;border:0;cursor:pointer;
+  background:var(--on-bg);color:var(--on-fg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  font-family:var(--sans);
+  box-shadow:0 22px 50px -26px rgba(0,0,0,.85);
+  transition:transform .12s ease;
+}
+.runbig:active{transform:scale(.975)}
+/* 비·눈·뇌우면 원 전체가 빨강이 된다. 노면이 젖었다는 건 오늘 나갈지 말지를 가르는 신호라,
+   글씨 몇 자보다 화면을 통째로 바꾸는 편이 확실하다. */
+.runbig.wet{background:var(--red);color:#fff;box-shadow:0 22px 50px -24px rgba(225,6,0,.75)}
+.runbig.wet .wx .d b{color:#fff;opacity:.95}
+.runbig.wet .wx .d span,.runbig.wet .rs{opacity:.66}
+/* 나이키·애플워치 러닝 페이스의 어법 — 아주 굵고 살짝 눕고 자간을 바짝 조인 대문자.
+   가로로 조금 늘려(scaleX) 폭을 채운다. 시스템 폰트에는 넓은 굵기가 없어 변형으로 낸다. */
+.runbig .rw{
+  font:900 clamp(56px,19vw,96px)/.92 var(--sans);font-style:italic;
+  letter-spacing:-.07em;text-transform:uppercase;
+  transform:scaleX(1.06);transform-origin:center;
+}
+.runbig .rs{font:800 clamp(10px,3vw,13px)/1 var(--sans);letter-spacing:.24em;opacity:.45;
+  margin-top:10px;text-transform:uppercase}
+/* 원을 감싼 얇은 링 — 애플워치 다이얼처럼 원이 혼자 뜨지 않게 잡아 준다 */
+.runring{position:relative;display:flex;align-items:center;justify-content:center;
+  padding:10px;border-radius:50%;border:2px solid var(--line)}
+
+/* 날씨는 원 안에 — 달리기 전에 보는 것 둘(어디로 갈까·밖이 어떤가)이 한자리에 있다 */
+.runbig .wx{display:flex;align-items:center;gap:8px;margin-top:16px;color:var(--on-fg)}
+.runbig .wx svg{width:clamp(24px,7vw,34px);height:clamp(24px,7vw,34px);flex:none;opacity:.9}
+.runbig .wx .t{font:900 clamp(24px,7.4vw,36px)/1 var(--sans);font-style:italic;
+  letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.runbig .wx .d{display:flex;flex-direction:column;gap:2px;text-align:left}
+.runbig .wx .d b{font:700 clamp(10px,2.9vw,12.5px)/1 var(--sans);opacity:.78}
+.runbig .wx .d span{font:600 clamp(9px,2.5vw,11px)/1 var(--sans);opacity:.5}
+.runbig .wx.warn .d b{color:#FFC94A;opacity:1}
+.runring:has(.runbig.wet){border-color:rgba(225,6,0,.45)}
 .tiles{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(104px,1fr))}
 .tiles-wide{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
 /* 브랜드 타일 — 영문 워드마크가 버튼을 채운다 */
@@ -953,6 +995,80 @@ function card(r, i){
 /* RUN 버튼과 지역 레일.
    지역을 격자로 깔면 카테고리를 바꿀 때마다 화면 절반이 타일로 찬다.
    버튼 하나로 접어 두고, 열면 큰 카드가 좌우로 흐르며 가운데에 딱 멈춘다. */
+/* ── 날씨 ────────────────────────────────────────────
+   Open-Meteo — 키가 필요 없고 CORS 도 열려 있어 페이지에서 바로 부를 수 있다.
+   라이더가 알고 싶은 건 기온과 '비/눈이 오는가' 다. 그 둘만 크게 보여준다.
+
+   위치는 이미 알고 있는 것만 쓴다 — 첫 화면을 열자마자 위치 권한을 묻지 않는다.
+   등록해 둔 집 → '내 주변'으로 잡아 둔 좌표 → 없으면 서울 시청 순.
+   기준이 어디인지는 화면에 적는다. */
+const WX_KEY = "coffeerun.wx";
+const SEOUL = {lat: 37.5665, lon: 126.9780, label: "서울 기준"};
+let wx = null;
+try { wx = JSON.parse(sessionStorage.getItem(WX_KEY) || "null"); } catch(e){ wx = null; }
+
+/* WMO 코드 → 라이더 기준 분류. 비·눈은 따로 표시한다 — 젖은 노면이 제일 중요하다 */
+/* 비·눈·뇌우일 때만 '젖음'. 안개는 시야 문제지 노면 문제는 아니라 따로 둔다. */
+const isWet = c => (c >= 51 && c <= 67) || (c >= 71 && c <= 86) || c >= 95;
+
+function wxKind(c){
+  if (c === 0) return ["맑음", "sun", 0];
+  if (c <= 2)  return ["구름 조금", "cloudsun", 0];
+  if (c === 3) return ["흐림", "cloud", 0];
+  if (c <= 48) return ["안개", "fog", 1];
+  if (c <= 57) return ["이슬비", "rain", 1];
+  if (c <= 67) return ["비", "rain", 1];
+  if (c <= 77) return ["눈", "snow", 1];
+  if (c <= 82) return ["소나기", "rain", 1];
+  if (c <= 86) return ["눈", "snow", 1];
+  return ["뇌우", "storm", 1];
+}
+const WX_SVG = {
+  sun:`<circle cx="12" cy="12" r="5"/><path d="M12 1.6v2.6M12 19.8v2.6M4.2 4.2l1.9 1.9M17.9 17.9l1.9 1.9M1.6 12h2.6M19.8 12h2.6M4.2 19.8l1.9-1.9M17.9 6.1l1.9-1.9"/>`,
+  cloudsun:`<path d="M8 5.4V3.2M3.8 7.2 2.3 5.7M4.2 12.4H2.2M12.2 7.2l1.5-1.5"/><circle cx="8" cy="9.4" r="3"/><path d="M7.5 19.5h9.9a3.6 3.6 0 0 0 .3-7.2 5 5 0 0 0-9.6-.3 3.7 3.7 0 0 0-.6 7.5z"/>`,
+  cloud:`<path d="M7.5 19h9.9a3.7 3.7 0 0 0 .3-7.4 5.1 5.1 0 0 0-9.8-.3A3.8 3.8 0 0 0 7.5 19z"/>`,
+  fog:`<path d="M7.5 15h9.9a3.7 3.7 0 0 0 .3-7.4 5.1 5.1 0 0 0-9.8-.3A3.8 3.8 0 0 0 7.5 15z"/><path d="M4 18.6h16M6.5 21.6h11"/>`,
+  rain:`<path d="M7.5 14.5h9.9a3.7 3.7 0 0 0 .3-7.4 5.1 5.1 0 0 0-9.8-.3 3.8 3.8 0 0 0-.4 7.7z"/><path d="M8.5 18l-1 3M13 18l-1 3M17.5 18l-1 3"/>`,
+  snow:`<path d="M7.5 14.5h9.9a3.7 3.7 0 0 0 .3-7.4 5.1 5.1 0 0 0-9.8-.3 3.8 3.8 0 0 0-.4 7.7z"/><path d="M9 19.2v.02M13 18.4v.02M17 19.2v.02M11 21.4v.02M15 21.4v.02"/>`,
+  storm:`<path d="M7.5 13.8h9.9a3.7 3.7 0 0 0 .3-7.4 5.1 5.1 0 0 0-9.8-.3 3.8 3.8 0 0 0-.4 7.7z"/><path d="M13.2 16.2 10 20.4h3l-1.4 3.4"/>`,
+};
+
+function wxPoint(){
+  if (home && Number.isFinite(home.lat)) return {lat: home.lat, lon: home.lon, label: "집 기준"};
+  if (here) return {lat: here.lat, lon: here.lon, label: "현재 위치"};
+  return SEOUL;
+}
+
+async function loadWx(force){
+  const p = wxPoint();
+  /* 15분 안에 같은 자리로 받아 둔 값이 있으면 다시 부르지 않는다 */
+  if (!force && wx && wx.label === p.label && Date.now() - wx.at < 15 * 60 * 1000) return wx;
+  try {
+    const u = `https://api.open-meteo.com/v1/forecast?latitude=${p.lat}&longitude=${p.lon}`
+      + `&current=temperature_2m,weather_code&timezone=Asia%2FSeoul`;
+    const j = await (await fetch(u)).json();
+    wx = {t: Math.round(j.current.temperature_2m), code: j.current.weather_code,
+          label: p.label, at: Date.now()};
+    try { sessionStorage.setItem(WX_KEY, JSON.stringify(wx)); } catch(e){}
+  } catch(e){ wx = wx || null; }
+  return wx;
+}
+
+/* 큰 원 안에 들어가므로 button 을 쓰지 않는다 — 버튼 안의 버튼은 만들 수 없다 */
+function wxHTML(){
+  if (!wx) return `<span class="wx"><span class="d"><b>날씨 확인 중</b></span></span>`;
+  const [label, icon, bad] = wxKind(wx.code);
+  return `<span class="wx${bad ? " warn" : ""}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${WX_SVG[icon]}</svg>
+    <span class="t">${wx.t}°</span>
+    <span class="d"><b>${label}</b><span>${wx.label}</span></span>
+  </span>`;
+}
+
+/* 아직 아무것도 안 고른 카테고리 화면 — 여기서는 목록 대신 큰 원을 보여준다 */
+const isLanding = () => ["c","d","s","gas"].includes(mode) && !region && !brand && !q;
+
 function renderRunbar(){
   /* 지금 화면이 무엇을 고르는 자리인지에 따라 레일 내용이 달라진다.
        SHOP 에서 브랜드를 고르기 전 → 브랜드
@@ -960,8 +1076,8 @@ function renderRunbar(){
      '내 주변'·PIN·RECENT·집 처럼 고를 것이 없는 화면에서는 버튼을 감춘다.
      예전에는 mode 로 DATA 를 걸러 base 가 비는 바람에 '0곳' 이 떴다. */
   const box = $("#runbar");
-  if (mode === "near" || mode === "pin" || mode === "recent" || mode === "home"){
-    box.innerHTML = ""; return;
+  if (mode === "near" || mode === "pin" || mode === "recent" || mode === "home" || isLanding()){
+    box.innerHTML = ""; return;     /* 첫 화면에서는 큰 원이 RUN 을 맡는다 */
   }
   const brandPick = mode === "d" && !brand;
   const base = mode === "gas" ? gasPool()
@@ -1123,6 +1239,44 @@ function render(){
   $("#crumbs").innerHTML = q ? `<span>"${esc(q)}" 검색 결과</span>` : cr.join(" ");
 
   const screen = $("#screen");
+
+  if (isLanding()){
+    if (railOpen){
+      /* 큰 원을 누르면 그 자리에 지역 카드가 좌우로 흐른다 */
+      const has = new Set(rows.map(regionOf));
+      const brandPick = mode === "d" && !brand;
+      const items = brandPick
+        ? [["전체 브랜드", null], ...BRAND_SEQ.filter(bn => rows.some(r => hasBrand(r, bn))).map(bn => [enOf(bn), bn])]
+        : [["전국", null], ...REGION_SEQ.filter(n => has.has(n)).map(n => [n, n])];
+      screen.innerHTML = `<div class="rail" id="rail" role="listbox" aria-label="${brandPick ? "브랜드" : "지역"}">`
+        + items.map(([lab, val]) => {
+            const col = brandPick && val ? BRAND_COLOR[val] : null;
+            const st = col ? ` style="background:${col[0]};border-color:transparent"` : "";
+            const tc = col ? ` style="color:${col[1]}"` : "";
+            return `<button class="rcard${col ? " rbrand" : ""}" role="option"`
+              + ` data-v="${esc(val === null ? "" : val)}" aria-current="${val === null}"${st}>`
+              + `<b${tc}>${esc(lab)}</b></button>`;
+          }).join("") + `</div>`;
+      return;
+    }
+    /* 담아 둔 곳은 퀵바의 PIN 버튼으로 본다 — 첫 화면은 RUN 과 날씨만 남긴다 */
+    screen.innerHTML = `<div class="landing">
+      <div class="runring"><button class="runbig${wx && isWet(wx.code) ? " wet" : ""}" id="runbig" type="button" aria-expanded="false">`
+      + `<span class="rw">RUN</span>`
+      + `<span class="rs">${mode === "d" && !brand ? "BRAND" : "REGION"}</span>`
+      + wxHTML()
+      + `</button></div>
+    </div>`;
+    loadWx().then(w => {
+      if (!w || !isLanding() || railOpen) return;
+      const big = $("#runbig");
+      if (!big) return;
+      big.querySelector(".wx").outerHTML = wxHTML();
+      big.classList.toggle("wet", isWet(w.code));   /* 비가 오면 원 전체가 빨강 */
+    });
+    return;
+  }
+
   if (!rows.length){ screen.innerHTML = `<p class="empty">해당하는 곳이 없습니다.</p>`; return; }
 
   /* 화면은 언제나 목록이다. 브랜드도 지역도 위쪽 RUN 레일에서 고른다 —
@@ -1167,6 +1321,18 @@ $("#crumbs").addEventListener("click", e => {
   render();
 });
 $("#screen").addEventListener("click", e => {
+  if (e.target.closest("#runbig")){ pushHist(); railOpen = true; render(); return; }
+  /* 첫 화면에서는 레일이 #screen 안에 뜬다 — 헤더 쪽과 같은 규칙으로 처리한다 */
+  const lrc = e.target.closest(".rcard");
+  if (lrc){
+    pushHist();
+    const v = lrc.dataset.v || null;
+    if (mode === "d" && !brand) { brand = v; filter = "ALL"; }
+    else region = v;
+    railOpen = false;
+    render();
+    return;
+  }
   const tile = e.target.closest(".tile");
   if (tile){
     pushHist();
@@ -1385,10 +1551,8 @@ qReset.addEventListener("click", () => {
 
 /* 목록이 헤더 밑으로 들어가면 경계선을 켠다. 선이 늘 있으면 화면이 답답하고,
    없으면 카드가 헤더에 붙어 잘린 것처럼 보인다. */
-/* 담아 둔 곳이 있으면 그걸 먼저 보여준다.
-   매번 전국 목록에서 내 가게를 다시 찾게 만들 이유가 없다.
-   카테고리 칩이나 제목을 누르면 바로 빠져나온다. */
-if (pins.size) mode = "pin";
+/* 담아 둔 곳은 첫 화면(랜딩)의 ★ PIN 칸에 함께 나온다 —
+   따로 PIN 모드로 시작하지 않는다. 첫 화면은 큰 RUN 원과 날씨가 주인공이다. */
 
 const head = document.querySelector(".head");
 const onScroll = () => head.classList.toggle("stuck", window.scrollY > 4);
