@@ -395,7 +395,7 @@ let mode = "c";          // c=카페 d=정비·딜러
 /* 카페는 시도 → 시군구 2단계, 딜러는 브랜드 → 시도 → 시군구 3단계로 판다.
    딜러가 1,137곳이라 지역만으로 나누면 한 타일에 수십 곳이 몰린다. */
 let brand = null, sido = null, gu = null, filter = "ALL", q = "";
-/* 즐겨찾기·최근 본 곳 — 길안내 런처의 '최근 검색'과 같은 방식으로 localStorage 에 둔다.
+/* PIN·RECENT — 길안내 런처의 '최근 검색'과 같은 방식으로 localStorage 에 둔다.
    저장하는 건 검색어가 아니라 '고른 장소의 키'라 다시 찾을 필요가 없다. */
 const PIN_KEY = "furycourse.pins.v1", RECENT_KEY = "furycourse.recent.v1", RECENT_MAX = 8;
 const keyOf = r => r.k + "|" + r.name + "|" + r.lat.toFixed(5);
@@ -846,7 +846,7 @@ function render(){
     .map(([v,l]) =>
     `<button data-m="${v}" aria-pressed="${mode===v}">${l}<span class="n">${modeCount(v)}</span></button>`).join("")
     + (pins.size ? `<button data-m="pin" aria-pressed="${mode==="pin"}">★ PIN<span class="n">${pins.size}</span></button>` : "")
-    + (recent.length ? `<button data-m="recent" aria-pressed="${mode==="recent"}">최근 본 곳<span class="n">${recent.length}</span></button>` : "");
+    + (recent.length ? `<button data-m="recent" aria-pressed="${mode==="recent"}">RECENT<span class="n">${recent.length}</span></button>` : "");
 
   /* 필터 세그 */
   if (mode === "near"){
@@ -871,7 +871,7 @@ function render(){
   }
   if (mode === "pin" || mode === "recent"){
     $("#filterSeg").innerHTML = "";
-    $("#crumbs").innerHTML = `<span>${mode === "pin" ? "PIN" : "최근 본 곳"} ${rows.length}곳</span>`;
+    $("#crumbs").innerHTML = `<span>${mode === "pin" ? "PIN" : "RECENT"} ${rows.length}곳</span>`;
     $("#screen").innerHTML = rows.length
       ? `<div class="list">${rows.map(r => card(r, DATA.indexOf(r))).join("")}</div>`
       : `<p class="empty">${mode === "pin" ? "카드의 ☆ 를 눌러 PIN 에 담아보세요." : "아직 열어본 곳이 없습니다."}</p>`;
