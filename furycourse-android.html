@@ -58,15 +58,18 @@
   --red-bg:#2C1416; --red-fg:#FF7A72; --red-line:#5C2A28;
 }
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--fg)}
+/* 페이지는 스크롤되지 않는다. 화면 하나에 다 담고, 넘치는 건 목록이 좌우로 흘려보낸다.
+   달리다 한 손으로 보는 화면이라 위아래로 훑게 만들면 시선이 오래 붙잡힌다. */
+html,body{margin:0;background:var(--bg);color:var(--fg);
+  height:100%;overflow:hidden;overscroll-behavior:none}
 body{
   font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-text-size-adjust:100%;
   padding:env(safe-area-inset-top) env(safe-area-inset-right)
           env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 .wrap{
-  max-width:760px;margin:0 auto;padding:20px 16px 40px;
-  min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;
+  max-width:760px;margin:0 auto;padding:14px 16px 10px;
+  height:100vh;height:100dvh;display:flex;flex-direction:column;gap:0;
 }
 /* 제목·검색·카테고리·퀵바는 위에 붙어 있고 목록만 그 아래로 흐른다.
    position:fixed 가 아니라 sticky 인 이유 — 좌우 여백과 max-width 를 .wrap 에서 그대로 물려받고,
@@ -74,29 +77,18 @@ body{
 
    상단 여백을 음수 마진으로 걷어내고 같은 크기를 padding 으로 되돌린다.
    그래야 스크롤한 내용이 헤더 위쪽 빈 칸으로 비쳐 보이지 않는다. */
-.head{
-  position:sticky;top:0;z-index:30;background:var(--bg);
-  margin:-20px -16px 0;padding:20px 16px 6px;
-  border-bottom:1px solid transparent;
-}
-.head.stuck{border-bottom-color:var(--line);
-  box-shadow:0 10px 18px -14px rgba(0,0,0,.55)}
-/* 화면이 짧으면(가로로 눕히거나 작은 기기) 헤더가 화면을 다 먹을 수 있다.
-   그런 경우에만 헤더 안쪽이 스크롤되게 해 목록이 사라지는 일을 막는다. */
-@media (max-height:620px){
-  .head{max-height:64dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
-}
-.crumbs{padding-top:10px}
-.eyebrow{font-size:11.5px;letter-spacing:.16em;color:var(--red);font-weight:700;text-transform:uppercase}
+/* 페이지가 스크롤되지 않으므로 헤더를 붙여 둘 필요가 없다 — 그냥 맨 위 칸이다 */
+.head{flex:none}
+.crumbs{padding-top:6px;flex:none;min-height:0}
 h1{
-  margin:6px 0 14px;font-size:clamp(28px,7vw,40px);font-weight:900;
+  margin:0 0 10px;font-size:clamp(25px,6.4vw,36px);font-weight:900;
   letter-spacing:-.035em;font-style:italic;
 }
 h1 small{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.02em;
   font-style:normal;color:var(--fg3);margin-top:5px}
 /* Notice — 제목 바로 아래. FURYCLASSIC 워드마크가 기울어 있어 태그도 같은 각도로 눕힌다.
    빨강은 이 페이지에서 브랜드 자리에만 쓰는 색이라, 여기 한 칸만 채우고 글은 회색으로 둔다. */
-.notice{display:flex;align-items:center;gap:9px;margin:-4px 0 14px;
+.notice{display:flex;align-items:center;gap:9px;margin:-4px 0 10px;
   font:600 12.5px/1.5 var(--sans);color:var(--fg2);letter-spacing:.005em}
 .notice b{flex:none;padding:5px 9px;border-radius:4px;background:var(--red);color:#fff;
   font:900 10px/1 var(--sans);letter-spacing:.15em;text-transform:uppercase;
@@ -106,7 +98,7 @@ h1 small{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.02em;
   animation:breathe 2.4s ease-in-out infinite}
 @keyframes breathe{0%,100%{opacity:.28;transform:scale(.8)}50%{opacity:1;transform:scale(1.15)}}
 @media (prefers-reduced-motion:reduce){.notice i{animation:none;opacity:.75}}
-.search-wrap{position:relative;margin-bottom:10px}
+.search-wrap{position:relative;margin-bottom:8px}
 .search-input{
   width:100%;font-size:16px;font-family:var(--sans);padding:12px 40px 12px 14px;
   border-radius:11px;border:1px solid var(--line);background:var(--surface);color:var(--fg);
@@ -123,7 +115,7 @@ h1 small{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.02em;
 
    고른 칩은 색을 꽉 채운다. 한 줄이라 진하게 칠해도 무겁지 않고,
    달리다 잠깐 보는 화면에서는 옅은 바탕보다 이쪽이 훨씬 빨리 읽힌다. */
-.seg{display:flex;flex-wrap:nowrap;gap:7px;margin-bottom:10px;
+.seg{display:flex;flex-wrap:nowrap;gap:7px;margin-bottom:8px;
   overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;
   -webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:2px}
 .seg::-webkit-scrollbar{display:none}
@@ -219,10 +211,11 @@ h1 small{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.02em;
 /* ── 첫 화면 ──────────────────────────────────────────
    목록을 깔지 않는다. 큰 원 하나와 날씨, 그리고 담아 둔 곳만.
    달리기 전에 알고 싶은 건 '어디로 갈까' 와 '지금 밖이 어떤가' 둘뿐이다. */
-.landing{display:flex;flex-direction:column;align-items:center;gap:14px;padding:2px 0 4px}
+.landing{display:flex;flex:1;min-height:0;flex-direction:column;align-items:center;
+  justify-content:center;gap:10px;padding:0}
 /* 화면 폭을 거의 다 쓴다. 장갑 낀 손으로 눌러야 하고, 첫 화면에서 유일한 목적지다. */
 .runbig{
-  width:min(88vw,420px);aspect-ratio:1;border-radius:50%;border:0;cursor:pointer;
+  width:min(88vw,420px,var(--circle,44dvh));aspect-ratio:1;border-radius:50%;border:0;cursor:pointer;
   background:var(--on-bg);color:var(--on-fg);
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
   font-family:var(--sans);
@@ -284,6 +277,7 @@ h1 small{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.02em;
 .runbig .wx .d span{font:600 clamp(9px,2.5vw,11px)/1 var(--sans);opacity:.5}
 .runbig .wx.warn .d b{color:#FFC94A;opacity:1}
 .runring:has(.runbig.wet){border-color:rgba(225,6,0,.45)}
+#screen{flex:1;min-height:0;display:flex;flex-direction:column}
 .tiles{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(104px,1fr))}
 .tiles-wide{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
 /* 브랜드 타일 — 영문 워드마크가 버튼을 채운다 */
@@ -305,7 +299,18 @@ h1 small{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.02em;
    색으로 구분하지 않는다 — 지역명에 색을 쓰면 링크로 오인된다. */
 .tile-region b{font-size:18px;letter-spacing:-.02em}
 .tile span{font-size:11.5px;color:var(--fg3);font-variant-numeric:tabular-nums}
-.list{display:flex;flex-direction:column;gap:8px}
+/* 목록은 좌우로 넘긴다. 세로로 쌓으면 페이지가 길어지는데 페이지는 스크롤되지 않는다.
+   카드 한 장이 한 화면 — 넘길 때 가운데에 딱 선다. */
+.list{display:flex;flex-direction:row;gap:10px;flex:1;min-height:0;width:100%;
+  overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;
+  scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;
+  scrollbar-width:none;padding-bottom:2px}
+.list::-webkit-scrollbar{display:none}
+.list > .card{flex:0 0 min(88%,420px);scroll-snap-align:center;scroll-snap-stop:always;
+  display:flex;flex-direction:column;max-height:100%;
+  overflow-y:auto;overscroll-behavior-y:contain;scrollbar-width:none}
+.list > .card::-webkit-scrollbar{display:none}
+.list > .card .card-head{cursor:pointer}
 .more{width:100%;margin-top:10px;padding:14px;border-radius:12px;cursor:pointer;
   border:1px dashed var(--line);background:transparent;color:var(--fg2);
   font:800 14px/1 var(--sans);font-style:italic;letter-spacing:-.02em}
@@ -374,11 +379,11 @@ h1 small{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.02em;
 .empty{padding:44px 0;text-align:center;color:var(--fg3);font-size:14px}
 /* 브랜드 서명 — 길안내 런처와 동일. 워드마크는 패스 변환된 인라인 SVG라
    폰트 설치와 무관하게 같게 보이고 currentColor 로 다크/라이트 자동 대응. */
-.brand{margin:auto 0 0;padding-top:22px;text-align:center;flex:none}
-.brand-cut{display:block;width:54px;height:4px;margin:0 auto 13px;
+.brand{flex:none;margin:0;padding-top:10px;text-align:center}
+.brand-cut{display:block;width:46px;height:3px;margin:0 auto 8px;
   background:var(--red);transform:skewX(-18deg);border-radius:1px}
-.wordmark{display:block;width:min(200px,58%);height:auto;margin:0 auto;color:var(--fg2)}
-.slogan{margin:9px 0 0;font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--fg3)}
+.wordmark{display:block;width:min(158px,46%);height:auto;margin:0 auto;color:var(--fg2)}
+.slogan{margin:6px 0 0;font-size:9px;letter-spacing:.13em;text-transform:uppercase;color:var(--fg3)}
 /* 입력창 안쪽 버튼 — 비어 있으면 붙여넣기, 글자가 있으면 지우기 */
 .io{position:absolute;right:7px;top:50%;transform:translateY(-50%);
   width:34px;height:34px;border:0;background:transparent;cursor:pointer;
@@ -432,9 +437,9 @@ h1 small{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.02em;
   cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--fg2)}
 .nearbar button[aria-pressed=true]{
   background:var(--on-bg);border-color:transparent;color:var(--on-fg)}
-.quickbar{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px}
-.qchip{flex:1 1 22%;min-width:74px;display:flex;flex-direction:column;align-items:center;gap:5px;
-  padding:10px 4px;border:1px solid var(--line);border-radius:12px;cursor:pointer;
+.quickbar{display:flex;flex-wrap:nowrap;gap:8px;margin:0 0 8px}
+.qchip{flex:1 1 22%;min-width:66px;display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:8px 4px;border:1px solid var(--line);border-radius:12px;cursor:pointer;
   background:var(--surface);color:var(--fg);font:500 11px/1 var(--sans)}
 /* 되돌아갈 자리가 없으면 눌리지 않는다는 걸 보이게 한다 — 눌러도 아무 일이 없으면 고장으로 읽힌다 */
 .qchip[disabled]{opacity:.34;cursor:default}
@@ -452,7 +457,6 @@ button:focus-visible,a:focus-visible,.tile:focus-visible{outline:2px solid var(-
 </head><body>
 <div class="wrap">
   <header class="head">
-  <div class="eyebrow">FURYCLASSIC</div>
   <h1><button id="qReset" type="button" class="home-title">COFFEE RUN</button></h1>
   <p class="notice"><b>Notice</b><i aria-hidden="true"></i>임시 테스트 중입니다.</p>
 
