@@ -157,6 +157,47 @@ h1 small{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.02em;
 .panel .hint{margin:0;font-size:12px;line-height:1.55;color:var(--fg3)}
 .home-edit{align-self:flex-start;border:0;background:transparent;padding:4px 0;cursor:pointer;
   color:var(--fg2);font:600 12.5px/1 var(--sans);text-decoration:underline;text-underline-offset:3px}
+/* ── RUN 버튼과 지역 레일 ────────────────────────────────
+   지역을 격자로 깔면 카테고리를 바꿀 때마다 화면 절반이 타일로 찬다.
+   버튼 하나로 접어 두고, 열면 큰 카드가 좌우로 흐른다.
+   장갑 낀 손으로도 누를 수 있게 카드를 크게 잡았다. */
+.runbtn{
+  width:100%;display:flex;align-items:center;gap:10px;
+  padding:13px 16px;border-radius:13px;cursor:pointer;
+  border:1px solid var(--line);background:var(--surface);color:var(--fg);
+  font:900 17px/1 var(--sans);font-style:italic;letter-spacing:-.02em;
+  text-align:left;
+}
+.runbtn .rl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.runbtn .rn{font:700 12px/1 var(--sans);font-style:normal;color:var(--fg3);
+  letter-spacing:0;font-variant-numeric:tabular-nums;flex:none}
+.runbtn .rc{flex:none;width:11px;height:11px;border-right:2.4px solid var(--fg3);
+  border-bottom:2.4px solid var(--fg3);transform:rotate(45deg) translate(-2px,-2px);
+  transition:transform .18s ease}
+.runbtn[aria-expanded=true]{background:var(--on-bg);color:var(--on-fg);border-color:transparent}
+.runbtn[aria-expanded=true] .rn{color:var(--on-fg);opacity:.6}
+.runbtn[aria-expanded=true] .rc{border-color:var(--on-fg);
+  transform:rotate(-135deg) translate(-3px,-3px)}
+
+/* 좌우 스크롤 — 카드가 화면 한가운데에 딱 멈춘다.
+   scroll-snap-stop:always 가 없으면 세게 튕겼을 때 여러 장을 지나쳐 늘어진다.
+   양옆 여백은 첫 장과 마지막 장도 가운데로 올 수 있게 카드 절반만큼 준다. */
+.rail{display:flex;gap:11px;margin-top:9px;overflow-x:auto;overscroll-behavior-x:contain;
+  scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;
+  padding:2px calc(50% - 110px) 4px;scrollbar-width:none}
+.rail::-webkit-scrollbar{display:none}
+.rcard{flex:0 0 220px;height:104px;scroll-snap-align:center;scroll-snap-stop:always;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  border:1px solid var(--line);border-radius:15px;background:var(--surface);
+  color:var(--fg);cursor:pointer;font-family:var(--sans);
+  transition:border-color .15s ease, background .15s ease}
+.rcard b{font:900 23px/1.1 var(--sans);letter-spacing:-.03em;text-align:center;word-break:keep-all}
+.rcard span{font:700 13px/1 var(--sans);color:var(--fg3);font-variant-numeric:tabular-nums}
+.rcard[aria-current=true]{background:var(--on-bg);border-color:transparent}
+.rcard[aria-current=true] b{color:var(--on-fg)}
+.rcard[aria-current=true] span{color:var(--on-fg);opacity:.65}
+.rcard:active{border-color:var(--fg3)}
+@media (prefers-reduced-motion:reduce){.rail{scroll-behavior:auto}.runbtn .rc{transition:none}}
 .tiles{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(104px,1fr))}
 .tiles-wide{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
 /* 브랜드 타일 — 영문 워드마크가 버튼을 채운다 */
@@ -346,6 +387,7 @@ button:focus-visible,a:focus-visible,.tile:focus-visible{outline:2px solid var(-
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 6.2 4.8 10.9l4.7 4.7"/><path d="M4.8 10.9h9.4a5 5 0 0 1 5 5v2.6"/></svg>
       <span>뒤로</span></button>
   </div>
+  <div id="runbar"></div>
   </header>
 
   <div id="crumbs" class="crumbs"></div>
@@ -396,7 +438,8 @@ const won = v => (v == null ? "" : Number(v).toLocaleString() + "원");
 let mode = "c";          // c=카페 d=정비·딜러
 /* 카페는 시도 → 시군구 2단계, 딜러는 브랜드 → 시도 → 시군구 3단계로 판다.
    딜러가 1,137곳이라 지역만으로 나누면 한 타일에 수십 곳이 몰린다. */
-let brand = null, region = null, gu = null, filter = "ALL", q = "";
+let brand = null, region = null, filter = "ALL", q = "";
+let railOpen = false;   /* RUN 레일이 펼쳐져 있는가 */
 /* PIN·RECENT — 길안내 런처의 '최근 검색'과 같은 방식으로 localStorage 에 둔다.
    저장하는 건 검색어가 아니라 '고른 장소의 키'라 다시 찾을 필요가 없다. */
 const PIN_KEY = "furycourse.pins.v1", RECENT_KEY = "furycourse.recent.v1", RECENT_MAX = 8;
@@ -441,7 +484,6 @@ function pool(){
     if (filter === "고급유") g = g.filter(r => r.pg);
     else if (filter === "경정비") g = g.filter(r => r.mt);
     if (region) g = g.filter(r => regionOf(r) === region);
-    if (gu)   g = g.filter(r => guKey(r) === gu);
     return g;
   }
   let rows = DATA.filter(r => r.k === mode);
@@ -460,7 +502,6 @@ function pool(){
                           : r.gkind === filter);
   if (mode === "d" && brand) rows = rows.filter(r => hasBrand(r, brand));
   if (region) rows = rows.filter(r => regionOf(r) === region);
-  if (gu)   rows = rows.filter(r => guKey(r) === gu);
   return rows;
 }
 
@@ -494,11 +535,7 @@ const REGIONS = [
 ];
 const REGION_SEQ = REGIONS.map(([n]) => n);
 const REGION_OF = Object.fromEntries(REGIONS.flatMap(([n, ss]) => ss.map(s => [s, n])));
-/* 시도를 여럿 품은 권역은 시군구 이름 앞에 도 이름을 붙인다 —
-   '천안시 서북구' 와 '청주시' 가 나란히 있으면 어느 도인지 알 수 없다. */
-const REGION_MULTI = new Set(REGIONS.filter(([, ss]) => ss.length > 1).map(([n]) => n));
 const regionOf = r => REGION_OF[r.sido] || r.sido;
-const guKey = r => REGION_MULTI.has(regionOf(r)) ? `${r.sido} ${r.gu}` : r.gu;
 
 /* 브랜드 표기는 영문 워드마크로 통일한다. 이미지 로고는 쓰지 않는다. */
 const BRAND_EN = {"BMW 모토라드": "BMW MOTORRAD", "두카티": "DUCATI", "KTM": "KTM", "허스크바나": "HUSQVARNA", "트라이엄프": "TRIUMPH", "베스파/피아지오": "VESPA", "로얄엔필드": "ROYAL ENFIELD", "야마하": "YAMAHA", "스즈키": "SUZUKI", "가와사키": "KAWASAKI", "혼다": "HONDA", "CFMOTO": "CFMOTO", "존테스": "ZONTES", "SYM": "SYM", "대림(디앤에이모터스)": "DNA MOTORS", "KR모터스(효성)": "KR MOTORS", "할리데이비슨": "HARLEY-DAVIDSON", "인디언": "INDIAN"};
@@ -545,11 +582,8 @@ function gasPool(){
 function countBy(rows, key){
   const m = new Map();
   /* 브랜드는 한 매장이 여러 개를 달 수 있어 각각 세어 준다 — 합계가 매장 수보다 많다 */
-  /* region 과 gu 는 레코드에 그대로 들어 있지 않다 —
-     권역은 시도를 묶어 만들고, 시군구는 권역에 따라 도 이름이 앞에 붙는다. */
-  const valueOf = key === "region" ? regionOf
-                : key === "gu"     ? guKey
-                : r => r[key];
+  /* 권역은 레코드에 그대로 들어 있지 않다 — 시도를 묶어 만든다 */
+  const valueOf = key === "region" ? regionOf : r => r[key];
   if (key === "brand")
     rows.forEach(r => brandsOf(r).forEach(b => m.set(b, (m.get(b)||0)+1)));
   else
@@ -774,6 +808,9 @@ function homeScreen(){
     </article>`;
 }
 
+/* 패널은 카드를 펼칠 때 비로소 만든다.
+   미리 다 그리면 카드 한 장이 내비 버튼 6개와 메뉴·주유 목록까지 안고 있어
+   목록 300장에 DOM 노드가 1만을 넘는다. 폰에서 첫 그리기가 눈에 띄게 느려진다. */
 function panel(r){
   const rows = [];
   const add = (k,v) => { if (v) rows.push(`<div class="row"><dt>${k}</dt><dd>${esc(v)}</dd></div>`); };
@@ -856,11 +893,45 @@ function card(r, i){
       ${d != null ? `<span class="dist">${d < 1 ? Math.round(d*1000)+"m" : d.toFixed(1)+"km"}</span>` : ""}
       <button class="pin ${pins.has(keyOf(r)) ? "on" : ""}" data-pin="${esc(keyOf(r))}"
         aria-label="PIN" aria-pressed="${pins.has(keyOf(r))}">${pins.has(keyOf(r)) ? "★" : "☆"}</button>
-    </div>${panel(r)}</article>`;
+    </div><div class="panel"></div></article>`;
+}
+
+/* RUN 버튼과 지역 레일.
+   지역을 격자로 깔면 카테고리를 바꿀 때마다 화면 절반이 타일로 찬다.
+   버튼 하나로 접어 두고, 열면 큰 카드가 좌우로 흐르며 가운데에 딱 멈춘다. */
+function renderRunbar(){
+  const base = mode === "gas" ? gasPool()
+             : mode === "d"   ? DATA.filter(r => r.k === "d" && (!brand || hasBrand(r, brand)))
+             : DATA.filter(r => r.k === mode);
+  const cnt = new Map();
+  base.forEach(r => { const v = regionOf(r); cnt.set(v, (cnt.get(v)||0)+1); });
+  const items = [["전국", base.length], ...REGION_SEQ.filter(n => cnt.get(n)).map(n => [n, cnt.get(n)])];
+  const cur = region || "전국";
+
+  const label = region ? `RUN · ${region}` : "RUN";
+  const btn = `<button class="runbtn" id="runbtn" type="button" aria-expanded="${railOpen}">`
+    + `<span class="rl">${esc(label)}</span>`
+    + `<span class="rn">${(cnt.get(region) ?? base.length).toLocaleString()}곳</span>`
+    + `<span class="rc" aria-hidden="true"></span></button>`;
+
+  const rail = railOpen
+    ? `<div class="rail" id="rail" role="listbox" aria-label="지역">`
+      + items.map(([n, c]) => `<button class="rcard" role="option" data-r="${esc(n)}"`
+          + ` aria-current="${n === cur}"><b>${esc(n)}</b><span>${c.toLocaleString()}곳</span></button>`).join("")
+      + `</div>`
+    : "";
+  $("#runbar").innerHTML = btn + rail;
+
+  /* 열자마자 지금 고른 지역이 가운데 보이게 — 매번 맨 앞부터 찾게 만들지 않는다 */
+  if (railOpen){
+    const sel = $(`#rail .rcard[aria-current=true]`);
+    if (sel) sel.scrollIntoView({inline:"center", block:"nearest"});
+  }
 }
 
 function render(){
   const rows = pool();
+  if (typeof $("#runbar") !== "undefined" && $("#runbar")) renderRunbar();
 
   if (typeof qBack !== "undefined") syncBack();
   if (typeof qNear !== "undefined"){
@@ -944,51 +1015,39 @@ function render(){
       + `${esc(v)}<span class="n">${n}</span></button>`).join("");
   }
 
-  /* 지역 경로 */
-  /* 경로 맨 앞 — 딜러는 브랜드로, 나머지는 지역으로 갈라진다.
-     'RUN' 은 제목(COFFEE RUN)과 카테고리(COFFEE·GEAR·GAS·PIN)와 같은 말투다.
-     뒤에 서울 › 강남구가 붙어 'RUN › 서울 › 강남구' 로 한 줄처럼 읽힌다. */
-  const cr = [`<button data-lv="0">${mode === "d" ? "전체 브랜드" : "RUN"}</button>`];
-  if (mode === "gas" && !region)
-    cr.push(`<span class="cov">아직 일부 지역만 — 매일 채워집니다</span>`);
-  if (mode === "d" && brand)
-    cr.push("›", `<button data-lv="1">${badge(brand, true)} ${esc(enOf(brand))}</button>`);
-  if (region) cr.push("›", `<button data-lv="2">${esc(region)}</button>`);
-  if (gu)   cr.push("›", `<span>${esc(gu)}</span>`);
+  /* 경로 — 지금 어디를 보고 있는지 한 줄. 되돌아가기는 RUN 버튼과 뒤로 버튼이 맡는다. */
+  const cr = [];
+  if (mode === "d") cr.push(brand
+    ? `<button data-lv="1">${badge(brand, true)} ${esc(enOf(brand))}</button>`
+    : `<span>브랜드를 고르세요</span>`);
+  cr.push(`<span>${region || "전국"} ${rows.length}곳</span>`);
+  if (mode === "gas") cr.push(`<span class="cov">아직 일부 지역만 — 매일 채워집니다</span>`);
   $("#crumbs").innerHTML = q ? `<span>"${esc(q)}" 검색 결과 ${rows.length}곳</span>` : cr.join(" ");
 
   const screen = $("#screen");
   if (!rows.length){ screen.innerHTML = `<p class="empty">해당하는 곳이 없습니다.</p>`; return; }
 
-  /* 검색·시군구까지 좁혀졌거나 결과가 적으면 목록, 아니면 타일.
+  /* 브랜드를 고르기 전의 SHOP 만 타일이고, 나머지는 전부 목록이다.
+     지역은 위쪽 RUN 레일에서 고른다 — 화면 절반을 지역 타일로 채우지 않는다.
 
-     위치를 한 번 잡았다는 이유로 목록으로 바꾸지 않는다. 예전에는 here 가 있으면
-     무조건 목록이라, '내 주변'을 한 번 쓰고 나면 그 뒤로 지역·브랜드 타일이
-     통째로 사라졌다 — 제목을 눌러 처음으로 돌아가도 돌아오지 않았다.
-     가까운 순으로 보고 싶으면 '내 주변'이 그 일을 한다. 위치는 카드의 거리 표시에만 쓴다. */
-  const drilled = mode === "d" ? (brand && region) : !!gu;
-  if (q || drilled || rows.length <= 24){
-    const sorted = here ? [...rows].sort((a,b) => (dist(a) ?? 9e9) - (dist(b) ?? 9e9)) : rows;
-    screen.innerHTML = `<div class="list">${sorted.map((r,i) =>
-      r.k === "g" ? gasCard(r) : card(r, DATA.indexOf(r))).join("")}</div>`;
+     위치를 한 번 잡았다는 이유로 정렬을 바꾸지 않는다. 예전에는 here 가 있으면
+     무조건 거리순이라 '내 주변'을 한 번 쓰고 나면 그 뒤로 순서가 계속 흐트러졌다.
+     가까운 순으로 보고 싶으면 '내 주변'이 그 일을 한다. */
+  if (mode === "d" && !brand && !q && !region){
+    const tiles = countBy(rows, "brand").filter(([v]) => v && v !== "기타");
+    screen.innerHTML = `<div class="tiles tiles-wide">${tiles.map(([v,n]) => brandTile(v,n)).join("")}</div>`;
     return;
   }
-  const lvKey = (mode === "d" && !brand) ? "brand" : (region ? "gu" : "region");
-  const tiles = countBy(rows, lvKey).filter(([v]) => v && v !== "기타");
-  const wide = lvKey === "brand" ? " tiles-wide" : "";
-  const isBrand = lvKey === "brand";
-  screen.innerHTML = `<div class="tiles${wide}">${tiles.map(([v,n]) => isBrand
-    ? brandTile(v, n)
-    : `<button class="tile${lvKey === "region" ? " tile-region" : ""}" data-v="${esc(v)}">`
-      + `<b>${esc(v)}</b><span>${n}곳</span></button>`
-  ).join("")}</div>`;
+  const sorted = here ? [...rows].sort((a,b) => (dist(a) ?? 9e9) - (dist(b) ?? 9e9)) : rows;
+  screen.innerHTML = `<div class="list">${sorted.map(r =>
+    r.k === "g" ? gasCard(r) : card(r, DATA.indexOf(r))).join("")}</div>`;
 }
 
 /* ── 이벤트 ── */
 $("#modeSeg").addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
   pushHist();
-  mode = b.dataset.m; filter = "ALL"; brand = region = gu = null; q = "";
+  mode = b.dataset.m; filter = "ALL"; brand = region = null; railOpen = false; q = "";
   input.value = ""; syncIO(); nearBar.classList.remove("on"); render();
 });
 $("#filterSeg").addEventListener("click", e => {
@@ -999,20 +1058,14 @@ $("#filterSeg").addEventListener("click", e => {
 $("#crumbs").addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
   pushHist();
-  const lv = b.dataset.lv;
-  if (lv === "0"){ brand = region = gu = null; filter = "ALL"; }
-  else if (lv === "1"){ region = gu = null; }
-  else { gu = null; }
+  if (b.dataset.lv === "1"){ brand = null; filter = "ALL"; }   /* 브랜드 고르기로 되돌아간다 */
   render();
 });
 $("#screen").addEventListener("click", e => {
   const tile = e.target.closest(".tile");
   if (tile){
     pushHist();
-    const v = tile.dataset.v;
-    if (mode === "d" && !brand){ brand = v; filter = "ALL"; }
-    else if (!region) region = v;
-    else gu = v;
+    brand = tile.dataset.v; filter = "ALL";      /* 화면에 남은 타일은 브랜드뿐이다 */
     render(); return;
   }
   const clip = e.target.closest("[data-clip]");
@@ -1042,6 +1095,11 @@ $("#screen").addEventListener("click", e => {
     if (wasOpen) return;                 /* 열린 걸 다시 누르면 닫기만 */
     card.classList.add("open");
     const r = DATA[+card.dataset.i];
+    const pn = card.querySelector(".panel");
+    if (r && pn && !pn.dataset.built){        /* 한 번 만든 패널은 다시 만들지 않는다 */
+      pn.outerHTML = panel(r);
+      card.querySelector(".panel").dataset.built = "1";
+    }
     if (r) touch(r);
     /* 위쪽 카드를 닫으면서 화면이 줄어들면 방금 연 카드가 시야 밖으로 밀린다 */
     requestAnimationFrame(() => {
@@ -1086,7 +1144,7 @@ syncIO();
    되돌릴 때 그대로 복원한다. 브라우저 히스토리를 쓰지 않는 이유는
    홈화면 앱(standalone)에는 뒤로 갈 주소창이 없어서다 — 스와이프도 안 먹는다. */
 const HIST = [], HIST_MAX = 50;
-const snap = () => ({mode, brand, region, gu, filter, q, nearKind});
+const snap = () => ({mode, brand, region, filter, q, nearKind});
 const same = (a, b) => a && b && Object.keys(a).every(k => a[k] === b[k]);
 
 function pushHist(){
@@ -1096,7 +1154,7 @@ function pushHist(){
   if (HIST.length > HIST_MAX) HIST.shift();
 }
 function restore(s){
-  mode = s.mode; brand = s.brand; region = s.region; gu = s.gu;
+  mode = s.mode; brand = s.brand; region = s.region; railOpen = false;
   filter = s.filter; q = s.q; nearKind = s.nearKind;
   input.value = q; syncIO();
   nearBar.classList.toggle("on", mode === "near");
@@ -1112,6 +1170,20 @@ function syncBack(){
 
 const qNear = $("#qNear"), qPin = $("#qPin"), qHome = $("#qHome"),
       qReset = $("#qReset"), qBack = $("#qBack");
+
+$("#runbar").addEventListener("click", e => {
+  const rb = e.target.closest("#runbtn");
+  if (rb){ railOpen = !railOpen; renderRunbar(); return; }
+  const rc = e.target.closest(".rcard");
+  if (rc){
+    pushHist();
+    const v = rc.dataset.r;
+    region = (v === "전국") ? null : v;
+    railOpen = false;                     /* 고르면 접힌다 — 목록을 보러 온 것이지 지역을 보러 온 게 아니다 */
+    render();
+    return;
+  }
+});
 
 qBack.addEventListener("click", () => {
   if (!HIST.length) return;
@@ -1137,7 +1209,7 @@ qNear.addEventListener("click", () => {
   if (mode === "near"){                       /* 다시 누르면 빠져나온다 */
     mode = "c"; nearBar.classList.remove("on"); render(); return;
   }
-  mode = "near"; filter = "ALL"; brand = region = gu = null; q = "";
+  mode = "near"; filter = "ALL"; brand = region = null; railOpen = false; q = "";
   input.value = ""; syncIO(); nearBar.classList.add("on");
   render();
   if (!here) locate(); 
@@ -1156,13 +1228,13 @@ qPin.addEventListener("click", () => {
   if (!pins.size){ alert("카드의 ☆ 를 눌러 PIN 에 담아보세요."); return; }
   pushHist();
   mode = (mode === "pin") ? "c" : "pin";
-  filter = "ALL"; brand = region = gu = null; q = ""; input.value = ""; syncIO(); render();
+  filter = "ALL"; brand = region = null; railOpen = false; q = ""; input.value = ""; syncIO(); render();
 });
 
 qHome.addEventListener("click", () => {
   pushHist();
   mode = (mode === "home") ? "c" : "home";
-  filter = "ALL"; brand = region = gu = null; q = "";
+  filter = "ALL"; brand = region = null; railOpen = false; q = "";
   input.value = ""; syncIO(); nearBar.classList.remove("on"); render();
 });
 
@@ -1193,7 +1265,7 @@ $("#screen").addEventListener("click", e => {
 
 qReset.addEventListener("click", () => {
   pushHist();
-  mode = "c"; filter = "ALL"; brand = region = gu = null; q = ""; nearKind = "c";
+  mode = "c"; filter = "ALL"; brand = region = null; railOpen = false; q = ""; nearKind = "c";
   input.value = ""; syncIO(); nearBar.classList.remove("on");
   document.querySelectorAll(".card.open").forEach(c => c.classList.remove("open"));
   window.scrollTo({top: 0, behavior: "smooth"});
