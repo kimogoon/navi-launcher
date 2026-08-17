@@ -293,9 +293,9 @@ h1 small{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.02em;
 .runbig .wx.warn .d b{color:#FFC94A;opacity:1}
 .runring:has(.runbig.wet){border-color:rgba(225,6,0,.45)}
 
-/* 집 — 큰 원의 오른쪽 아래에 붙는 작은 원.
-   RUN 을 누르면 어디로 갈지 고르고, 여기를 누르면 갈 곳이 이미 정해져 있다.
-   같은 자리에 있어야 장갑 낀 손이 헤매지 않는다. */
+/* 처음으로 — 큰 원의 오른쪽 아래에 붙는 작은 원.
+   RUN 을 누르면 안으로 들어가고, 여기를 누르면 맨 앞으로 돌아온다.
+   제목을 눌러도 같지만, 화면 아래쪽을 보던 손이 맨 위까지 올라가지 않아도 된다. */
 /* 크기는 %로 잡지 않는다. 감싼 링의 높이가 내용에 따라 정해지는 자리라
    퍼센트가 auto 로 풀려 단추가 세로로 늘어났다(55×92). fitCircle 이 원 지름을 잴 때
    집 지름도 함께 px 로 넣어 준다(--home). */
@@ -312,10 +312,8 @@ h1 small{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.02em;
   stroke-linecap:round;stroke-linejoin:round}
 .runhome:active{transform:scale(.93)}
 /* 집을 아직 등록하지 않았으면 비워 둔 자리처럼 보이게 한다 — 눌러 보라는 뜻이다 */
-/* 집을 아직 등록하지 않았으면 비워 둔 자리처럼.
-   클래스 이름을 nohome 으로 둔다 — 목록이 비었을 때 쓰는 .empty 는
-   padding:44px 0 을 걸고 있어, 그걸 같이 물면 단추가 세로로 늘어난다. */
-.runhome.nohome{background:var(--surface);color:var(--fg2);border-color:var(--line)}
+/* 클래스 이름에 empty 를 쓰지 않는다 — 목록이 비었을 때 쓰는 .empty 가
+   padding:44px 0 을 걸고 있어, 같이 물면 단추가 세로로 늘어난다(55×92 가 나왔다). */
 @media (prefers-reduced-motion:reduce){.runhome{transition:none}}
 #screen{flex:1;min-height:0;display:flex;flex-direction:column}
 .tiles{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(104px,1fr))}
@@ -1388,8 +1386,7 @@ function render(){
       <div class="runring"><div class="runbig${showWx ? wet : ""}" id="runbig" role="button" tabindex="0"
            aria-label="${mode === "d" ? "브랜드 고르기" : "목록 열기"}">`
       + inner + (showWx ? wxHTML() : "") + `</div>
-        <button class="runhome${home ? "" : " nohome"}" id="runhome" type="button"
-                aria-label="${home ? "집으로 안내" : "집 등록"}">
+        <button class="runhome" id="runhome" type="button" aria-label="처음 화면으로">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.6 10.4 12 3.6l8.4 6.8"/><path d="M5.8 12v7.4a1 1 0 0 0 1 1h10.4a1 1 0 0 0 1-1V12"/><path d="M10 20.4v-5.2h4v5.2"/></svg>
         </button>
       </div>
@@ -1453,12 +1450,11 @@ $("#crumbs").addEventListener("click", e => {
   render();
 });
 $("#screen").addEventListener("click", e => {
-  /* 큰 원에 붙은 집 — 원 밖(runring)에 두어 원을 누른 것으로 새지 않게 했다.
-     등록돼 있으면 바로 안내, 없으면 등록 화면으로 보낸다. */
+  /* 큰 원에 붙은 집 — 처음 화면으로 돌아간다.
+     제목(COFFEE RUN)을 눌러도 같은 일이 일어나지만, 목록을 보다가 손이 닿는 자리는 여기다.
+     원 밖(runring)에 두어 원을 누른 것으로 새지 않게 했다. */
   if (e.target.closest("#runhome")){
-    pushHist();
-    mode = "home"; filter = "ALL"; brand = region = null; railOpen = false; q = "";
-    input.value = ""; syncIO(); render();
+    qReset.click();
     return;
   }
   if (e.target.closest("#runbig")){
