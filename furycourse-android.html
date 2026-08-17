@@ -877,7 +877,9 @@ function render(){
   }
 
   /* 지역 경로 */
-  const cr = [`<button data-lv="0">${mode === "d" ? "전체 브랜드" : "전국"}</button>`];
+  /* 경로 맨 앞 — 딜러는 브랜드로, 나머지는 지역으로 갈라진다.
+     '전국' 대신 '위치' 라고 적는다. 뒤에 붙는 것이 서울 › 강남구 라 한 줄로 읽힌다. */
+  const cr = [`<button data-lv="0">${mode === "d" ? "전체 브랜드" : "위치"}</button>`];
   if (mode === "gas" && !sido)
     cr.push(`<span class="cov">아직 일부 지역만 — 매일 채워집니다</span>`);
   if (mode === "d" && brand)
