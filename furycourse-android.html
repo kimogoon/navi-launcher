@@ -117,20 +117,31 @@ h1 small{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.02em;
   border:0;background:transparent;color:var(--fg3);font-size:19px;cursor:pointer;
   width:30px;height:30px;border-radius:50%;
 }
-.seg{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+/* 선택줄은 전부 좌우로 흐른다. 세로로 움직이는 건 목록뿐이다.
+   예전에는 칩이 줄바꿈돼 카테고리를 바꿀 때마다 헤더 높이가 한 줄씩 들썩였다 —
+   고정 헤더에서 그건 화면이 튀는 것으로 보인다.
+
+   고른 칩은 색을 꽉 채운다. 한 줄이라 진하게 칠해도 무겁지 않고,
+   달리다 잠깐 보는 화면에서는 옅은 바탕보다 이쪽이 훨씬 빨리 읽힌다. */
+.seg{display:flex;flex-wrap:nowrap;gap:7px;margin-bottom:10px;
+  overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:2px}
+.seg::-webkit-scrollbar{display:none}
 .seg button{
-  font:600 13px/1 var(--sans);padding:8px 12px;border-radius:999px;cursor:pointer;
+  flex:0 0 auto;scroll-snap-align:start;
+  font:900 15px/1 var(--sans);font-style:italic;letter-spacing:-.025em;
+  padding:11px 15px;border-radius:999px;cursor:pointer;
   border:1px solid var(--line);background:var(--surface);color:var(--fg2);
-  white-space:nowrap;                 /* 'GAS STATION' 이 두 줄로 접히면 칩 모양이 깨진다 */
+  white-space:nowrap;transition:background .14s ease, color .14s ease;
 }
-/* 활성 표시는 색을 꽉 채우지 않는다 — 칩이 여러 줄이라 진하게 칠하면 화면이 무거워진다.
-   옅은 바탕 + 진한 글자 + 또렷한 테두리로 구분한다. */
 .seg button[aria-pressed=true]{
-  background:var(--sel-bg);border-color:var(--sel-line);color:var(--sel-fg);font-weight:700}
-.seg button[aria-pressed=true] .n{opacity:.65}
-#modeSeg button[aria-pressed=true]{
-  background:var(--red-bg);border-color:var(--red-line);color:var(--red-fg)}
-.seg .n{opacity:.55;margin-left:4px;font-variant-numeric:tabular-nums}
+  background:var(--on-bg);border-color:transparent;color:var(--on-fg)}
+/* 지금 보고 있는 카테고리는 브랜드 색으로 — 한눈에 어디에 있는지 알 수 있게 */
+#modeSeg button[aria-pressed=true]{background:var(--red);border-color:transparent;color:#fff}
+#modeSeg button[aria-pressed=true] .n{color:#fff;opacity:.72}
+.seg button[aria-pressed=true] .n{color:var(--on-fg);opacity:.6}
+.seg .n{opacity:.5;margin-left:6px;font-style:normal;font-weight:700;font-size:13px;
+  font-variant-numeric:tabular-nums}
 .crumbs{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px;font-size:13px;color:var(--fg3)}
 /* 경로는 눌러서 되돌아가는 곳이지 강조할 곳이 아니다.
    빨강은 브랜드색이라 여기 쓰면 화면에서 가장 먼저 눈에 띈다 — 밑줄로만 누를 수 있음을 알린다. */
@@ -327,14 +338,16 @@ h1 small{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.02em;
 .bdg.bm14{background:#111827;color:#F97316}
 .bdg.bm15{background:#0E3A5F;color:#7FD1E8}
 .bdg.bm16{background:#0F6E78;color:#FFFFFF}
-.nearbar{display:none;gap:6px;margin:0 0 10px}
-.nearbar.on{display:flex;flex-wrap:wrap}
-/* 4종이라 좁은 화면에서는 두 줄로 접힌다 — 한 줄에 밀어 넣으면 글자가 눌린다 */
-.nearbar button{flex:1 1 22%;min-width:78px;font:600 12.5px/1 var(--sans);padding:9px 6px;border-radius:9px;
-  white-space:nowrap;
+.nearbar{display:none;gap:7px;margin:0 0 10px;overflow-x:auto;
+  scroll-snap-type:x proximity;scrollbar-width:none;padding-bottom:2px}
+.nearbar::-webkit-scrollbar{display:none}
+.nearbar.on{display:flex;flex-wrap:nowrap}
+.nearbar button{flex:0 0 auto;scroll-snap-align:start;
+  font:900 14px/1 var(--sans);font-style:italic;letter-spacing:-.02em;
+  padding:10px 14px;border-radius:999px;white-space:nowrap;
   cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--fg2)}
 .nearbar button[aria-pressed=true]{
-  background:var(--sel-bg);border-color:var(--sel-line);color:var(--sel-fg);font-weight:700}
+  background:var(--on-bg);border-color:transparent;color:var(--on-fg)}
 .quickbar{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px}
 .qchip{flex:1 1 22%;min-width:74px;display:flex;flex-direction:column;align-items:center;gap:5px;
   padding:10px 4px;border:1px solid var(--line);border-radius:12px;cursor:pointer;
@@ -934,6 +947,16 @@ function render(){
   if (typeof $("#runbar") !== "undefined" && $("#runbar")) renderRunbar();
 
   if (typeof qBack !== "undefined") syncBack();
+  /* 한 줄로 흐르다 보니 고른 칩이 화면 밖으로 밀려 있을 수 있다 — 보이는 자리로 끌어온다 */
+  requestAnimationFrame(() => {
+    ["#modeSeg", "#filterSeg", "#nearBar"].forEach(sel => {
+      const on = document.querySelector(`${sel} button[aria-pressed=true]`);
+      if (!on) return;
+      const box = on.parentElement, l = on.offsetLeft, r = l + on.offsetWidth;
+      if (l < box.scrollLeft || r > box.scrollLeft + box.clientWidth)
+        box.scrollTo({left: Math.max(0, l - 12), behavior: "smooth"});
+    });
+  });
   if (typeof qNear !== "undefined"){
     qNear.setAttribute("aria-pressed", String(mode === "near"));
     qPin.setAttribute("aria-pressed", String(mode === "pin"));
