@@ -228,6 +228,7 @@ h1 small{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.02em;
   font-family:var(--sans);
   box-shadow:0 22px 50px -26px rgba(0,0,0,.85);
   transition:transform .12s ease;
+  overflow:hidden;              /* 안쪽 스트립이 원 밖으로 새면 동그라미가 깨진다 */
 }
 .runbig:active{transform:scale(.975)}
 /* 비·눈·뇌우면 원 전체가 빨강이 된다. 노면이 젖었다는 건 오늘 나갈지 말지를 가르는 신호라,
@@ -237,11 +238,17 @@ h1 small{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.02em;
 .runbig.wet .wx .d span,.runbig.wet .rs{opacity:.66}
 /* 나이키·애플워치 러닝 페이스의 어법 — 아주 굵고 살짝 눕고 자간을 바짝 조인 대문자.
    가로로 조금 늘려(scaleX) 폭을 채운다. 시스템 폰트에는 넓은 굵기가 없어 변형으로 낸다. */
-.runbig .rw{
+/* 원 안 글자는 RUN 을 기준으로 삼는다. 브랜드도 GEAR 도 GAS STATION 도 같은 규칙 —
+   길수록 한 단계씩 줄여서 어떤 말이 와도 원 안에 담긴다. */
+.runbig .rw, .bstrip > span{
   font:900 clamp(56px,19vw,96px)/.92 var(--sans);font-style:italic;
   letter-spacing:-.07em;text-transform:uppercase;
   transform:scaleX(1.06);transform-origin:center;
+  text-align:center;word-break:keep-all;
 }
+.runbig [data-len="2"]{font-size:clamp(34px,11.5vw,58px)}
+.runbig [data-len="3"]{font-size:clamp(24px,8vw,40px)}
+.runbig [data-len="4"]{font-size:clamp(18px,6vw,30px)}
 
 /* SHOP — 원은 가만히 있고 브랜드 이름만 좌우로 흐른다.
    원이 통째로 움직이면 시선이 따라다녀야 해서 어지럽다. 창은 고정, 내용만 넘긴다. */
@@ -252,13 +259,8 @@ h1 small{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.02em;
 .bstrip::-webkit-scrollbar{display:none}
 .bstrip > span{
   flex:0 0 100%;scroll-snap-align:center;scroll-snap-stop:always;
-  display:flex;align-items:center;justify-content:center;padding:0 8%;
-  font:900 clamp(24px,8.4vw,44px)/1 var(--sans);font-style:italic;
-  letter-spacing:-.05em;text-transform:uppercase;text-align:center;word-break:keep-all;
+  display:flex;align-items:center;justify-content:center;padding:0 9%;
 }
-/* 이름이 길수록 조금씩 줄인다 — HARLEY-DAVIDSON 이 원 밖으로 나가면 안 된다 */
-.bstrip > span[data-len="2"]{font-size:clamp(18px,6.2vw,33px)}
-.bstrip > span[data-len="3"]{font-size:clamp(15px,5.1vw,27px)}
 /* 좌우에 더 있다는 표시 — 화살표 대신 원 안쪽을 살짝 어둡게 해서 넘길 게 있음을 알린다 */
 .bwin{position:relative;width:100%;display:flex;align-items:center}
 .bwin::before,.bwin::after{content:"";position:absolute;top:0;bottom:0;width:13%;
@@ -1088,7 +1090,14 @@ function wxHTML(){
 /* 아직 아무것도 안 고른 카테고리 화면 — 여기서는 목록 대신 큰 원을 보여준다 */
 /* 첫 화면인가 — 아직 아무것도 안 골랐고, 목록을 직접 열지도 않은 상태 */
 let forceList = false;
-const isLanding = () => ["c","d","s","gas"].includes(mode) && !region && !brand && !q && !forceList;
+const isLanding = () => ["c","d","s","gas","recent"].includes(mode)
+  && !region && !brand && !q && !forceList
+  && !(mode === "recent" && !recent.length);      /* 본 곳이 없으면 원을 세울 것도 없다 */
+
+/* 원 안에 세울 말. SHOP 만 브랜드가 흐르므로 여기 없다.
+   길이에 따라 글자를 줄이려고 단계를 함께 둔다. */
+const CIRCLE_WORD = {c: "RUN", s: "GEAR", gas: "GAS STATION", recent: "RECENT"};
+const wordStep = n => n > 12 ? 4 : n > 8 ? 3 : n > 5 ? 2 : 1;
 
 function renderRunbar(){
   /* 지금 화면이 무엇을 고르는 자리인지에 따라 레일 내용이 달라진다.
@@ -1206,7 +1215,7 @@ function render(){
     homeScreen();
     return;
   }
-  if (mode === "pin" || mode === "recent"){
+  if (mode === "pin" || (mode === "recent" && !isLanding())){
     $("#filterSeg").innerHTML = "";
     $("#crumbs").innerHTML = `<span>${mode === "pin" ? "PIN" : "RECENT"}</span>`
       + ` <button data-lv="0">전체 보기</button>`;
@@ -1273,18 +1282,23 @@ function render(){
     if (mode === "d"){
       const names = ["BRAND", ...BRAND_SEQ.map(enOf)];
       inner = `<div class="bwin"><div class="bstrip" id="bstrip">`
-        + names.map(n => `<span data-len="${n.length > 12 ? 3 : n.length > 7 ? 2 : 1}">${esc(n)}</span>`).join("")
+        + names.map(n => `<span class="rw" data-len="${wordStep(n.length)}">${esc(n)}</span>`).join("")
         + `</div></div>`;
     } else {
-      inner = `<span class="rw">RUN</span>`;
+      const w = CIRCLE_WORD[mode] || "RUN";
+      inner = `<span class="rw" data-len="${wordStep(w.length)}">${w}</span>`;
     }
+    /* 날씨는 COFFEE 에서만. 나머지는 글자 하나로 끝내는 편이 원이 깔끔하다 —
+       달리기 전에 하늘을 보는 건 카페로 갈 때다. */
+    const showWx = mode === "c";
     screen.innerHTML = `<div class="landing">
-      <div class="runring"><div class="runbig${wet}" id="runbig" role="button" tabindex="0"
+      <div class="runring"><div class="runbig${showWx ? wet : ""}" id="runbig" role="button" tabindex="0"
            aria-label="${mode === "d" ? "브랜드 고르기" : "목록 열기"}">`
-      + inner + wxHTML() + `</div></div>
+      + inner + (showWx ? wxHTML() : "") + `</div></div>
     </div>`;
+    if (!showWx) return;
     loadWx().then(w => {
-      if (!w || !isLanding()) return;
+      if (!w || !isLanding() || mode !== "c") return;
       const big = $("#runbig");
       if (!big || !big.querySelector(".wx")) return;
       big.querySelector(".wx").outerHTML = wxHTML();
@@ -1356,7 +1370,7 @@ $("#screen").addEventListener("click", e => {
         b.setAttribute("aria-pressed", String(b.dataset.nk === "gas")));
       if (!here) locate();
     } else {
-      region = null;                      /* GEAR — 그냥 전체 목록 */
+      region = null;                      /* GEAR·RECENT — 그냥 목록 */
       forceList = true;
     }
     render();
