@@ -406,10 +406,9 @@ function pool(){
   /* 딜러 모드에서 등급 필터는 '브랜드를 고른 뒤' 에만 건다.
      브랜드 타일 단계에서 걸면 해당 등급이 없는 브랜드가 통째로 사라져
      "브랜드가 왜 이것밖에 없지?" 가 된다. */
-  const gradeOn = mode === "c" || mode === "s" || !!brand;
+  const gradeOn = mode === "s" || !!brand;
   if (filter !== "ALL" && gradeOn)
-    rows = rows.filter(r => mode === "c" ? r.tier === filter
-                          : mode === "s" ? (r.tags || []).includes(filter)
+    rows = rows.filter(r => mode === "s" ? (r.tags || []).includes(filter)
                           : r.gkind === filter);
   if (mode === "d" && brand) rows = rows.filter(r => hasBrand(r, brand));
   if (sido) rows = rows.filter(r => r.sido === sido);
@@ -491,7 +490,6 @@ function badges(r){
   const b = [];
   if (r.cl) b.push(["wn","폐업 의심"]);
   if (mode === "c"){
-    if (r.tier) b.push(["", TIER[r.tier] || r.tier]);
     if (r.meal) b.push(["ok","식사 가능"]);
     if (r.cat) b.push(["", r.cat]);
     if (r.rv != null) b.push(["", "리뷰 " + r.rv.toLocaleString()]);
@@ -743,7 +741,11 @@ function render(){
       : `<p class="empty">${mode === "pin" ? "카드의 ☆ 를 눌러 즐겨찾기에 담아보세요." : "아직 열어본 곳이 없습니다."}</p>`;
     return;
   }
-  if (mode === "d" && !brand){          /* 브랜드 고르기 전에는 등급 칩을 숨긴다 */
+  if (mode === "c"){
+    /* 카페 등급(저장목록·검수통과·후보·보류)은 자료를 모으며 내가 붙인 검수 상태다.
+       라이더에게는 아무 의미가 없는 말이라 칩으로 세우지 않는다. */
+    $("#filterSeg").innerHTML = "";
+  } else if (mode === "d" && !brand){    /* 브랜드 고르기 전에는 등급 칩을 숨긴다 */
     $("#filterSeg").innerHTML = "";
   } else if (mode === "gas"){
     const all = gasPool();
