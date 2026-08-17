@@ -174,9 +174,9 @@ h1 small{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.02em;
 }
 .tile{position:relative}
 .tile b{display:block;font-size:15px;font-weight:700}
-/* 특별시·광역시는 목록 앞쪽에 모이고 이름이 아주 살짝 크다.
-   '광역시' 같은 덧말이나 색으로 구분하지 않는다 — 지역명에 색을 쓰면 링크로 오인된다. */
-.tile-metro b{font-size:18px;letter-spacing:-.015em}
+/* 권역 타일은 7개뿐이라 이름을 키운다. 시군구 타일보다 한 단계 위라는 표시이기도 하다.
+   색으로 구분하지 않는다 — 지역명에 색을 쓰면 링크로 오인된다. */
+.tile-region b{font-size:18px;letter-spacing:-.02em}
 .tile span{font-size:11.5px;color:var(--fg3);font-variant-numeric:tabular-nums}
 .list{display:flex;flex-direction:column;gap:8px}
 .card{border:1px solid var(--line);background:var(--surface);border-radius:12px;overflow:hidden}
@@ -351,7 +351,7 @@ button:focus-visible,a:focus-visible,.tile:focus-visible{outline:2px solid var(-
   <div id="crumbs" class="crumbs"></div>
   <div id="screen"></div>
 
-  <p class="note">지역 타일을 눌러 시도 → 시군구로 좁히거나, 위에서 바로 검색하세요.
+  <p class="note">지역 타일을 눌러 권역 → 시군구로 좁히거나, 위에서 바로 검색하세요.
   카드를 누르면 영업시간·메뉴·반경 편의점과 함께
   T맵·네이버지도·카카오내비·카카오맵·Apple지도·구글지도 버튼이 열립니다.
   주유소와 고급유 정보는 SHOP 카드에만 표시됩니다.
@@ -396,7 +396,7 @@ const won = v => (v == null ? "" : Number(v).toLocaleString() + "원");
 let mode = "c";          // c=카페 d=정비·딜러
 /* 카페는 시도 → 시군구 2단계, 딜러는 브랜드 → 시도 → 시군구 3단계로 판다.
    딜러가 1,137곳이라 지역만으로 나누면 한 타일에 수십 곳이 몰린다. */
-let brand = null, sido = null, gu = null, filter = "ALL", q = "";
+let brand = null, region = null, gu = null, filter = "ALL", q = "";
 /* PIN·RECENT — 길안내 런처의 '최근 검색'과 같은 방식으로 localStorage 에 둔다.
    저장하는 건 검색어가 아니라 '고른 장소의 키'라 다시 찾을 필요가 없다. */
 const PIN_KEY = "furycourse.pins.v1", RECENT_KEY = "furycourse.recent.v1", RECENT_MAX = 8;
@@ -440,8 +440,8 @@ function pool(){
     }
     if (filter === "고급유") g = g.filter(r => r.pg);
     else if (filter === "경정비") g = g.filter(r => r.mt);
-    if (sido) g = g.filter(r => r.sido === sido);
-    if (gu)   g = g.filter(r => r.gu === gu);
+    if (region) g = g.filter(r => regionOf(r) === region);
+    if (gu)   g = g.filter(r => guKey(r) === gu);
     return g;
   }
   let rows = DATA.filter(r => r.k === mode);
@@ -459,8 +459,8 @@ function pool(){
     rows = rows.filter(r => mode === "s" ? (r.tags || []).includes(filter)
                           : r.gkind === filter);
   if (mode === "d" && brand) rows = rows.filter(r => hasBrand(r, brand));
-  if (sido) rows = rows.filter(r => r.sido === sido);
-  if (gu)   rows = rows.filter(r => r.gu === gu);
+  if (region) rows = rows.filter(r => regionOf(r) === region);
+  if (gu)   rows = rows.filter(r => guKey(r) === gu);
   return rows;
 }
 
@@ -468,12 +468,37 @@ function pool(){
    지역 타일은 곳 수가 많은 순. */
 /* 지역 타일은 지도에서 보는 순서(북→남)로 세운다. 곳 수 순서는 위치 감각을 깨뜨린다.
    광역시·특별시·특별자치시는 도와 성격이 달라 따로 표시한다. */
-/* 특별시·광역시·특별자치시를 앞으로 몰고, 그 다음 도를 놓는다.
-   각 묶음 안에서는 지도에서 보는 순서(북→남). */
 const METRO = ["서울","인천","대전","광주","대구","울산","부산","세종"];
 const PROV  = ["경기","강원","충북","충남","전북","전남","경북","경남","제주"];
 const SIDO_SEQ = [...METRO, ...PROV];
-const isMetro = v => METRO.includes(v);
+
+/* 지역은 시도 17개가 아니라 권역 7개로 연다.
+   대전 3 · 전북 4 · 전남 4 · 대구 3처럼 카페가 서너 곳뿐인 시도가 타일 하나씩 먹고 있었다.
+
+   묶는 기준은 '오늘 어느 쪽으로 달릴까' 다 — 행정구역이 아니라 방향.
+   경기만 따로 두는 이유: 카페 78곳으로 전체의 36% 다. 수도권으로 묶으면
+   한 타일이 절반을 담고, 눌렀을 때 시군구 50여 개가 쏟아져 지금보다 나빠진다.
+   서울은 카페가 10곳뿐이라(인천 17곳보다 적다) 인천과 함께 둔다 —
+   바이크 카페는 도심이 아니라 외곽에 있다.
+   강원·제주는 곳 수가 적어도 남긴다. 방향이 달라 어디에도 붙일 수 없다.
+
+   순서는 지도 그대로 — 윗줄 서→동, 아랫줄 중→남서→남동, 마지막 제주. */
+const REGIONS = [
+  ["서울·인천", ["서울", "인천"]],
+  ["경기",      ["경기"]],
+  ["강원",      ["강원"]],
+  ["충청",      ["대전", "세종", "충북", "충남"]],
+  ["전라",      ["광주", "전북", "전남"]],
+  ["경상",      ["부산", "울산", "대구", "경북", "경남"]],
+  ["제주",      ["제주"]],
+];
+const REGION_SEQ = REGIONS.map(([n]) => n);
+const REGION_OF = Object.fromEntries(REGIONS.flatMap(([n, ss]) => ss.map(s => [s, n])));
+/* 시도를 여럿 품은 권역은 시군구 이름 앞에 도 이름을 붙인다 —
+   '천안시 서북구' 와 '청주시' 가 나란히 있으면 어느 도인지 알 수 없다. */
+const REGION_MULTI = new Set(REGIONS.filter(([, ss]) => ss.length > 1).map(([n]) => n));
+const regionOf = r => REGION_OF[r.sido] || r.sido;
+const guKey = r => REGION_MULTI.has(regionOf(r)) ? `${r.sido} ${r.gu}` : r.gu;
 
 /* 브랜드 표기는 영문 워드마크로 통일한다. 이미지 로고는 쓰지 않는다. */
 const BRAND_EN = {"BMW 모토라드": "BMW MOTORRAD", "두카티": "DUCATI", "KTM": "KTM", "허스크바나": "HUSQVARNA", "트라이엄프": "TRIUMPH", "베스파/피아지오": "VESPA", "로얄엔필드": "ROYAL ENFIELD", "야마하": "YAMAHA", "스즈키": "SUZUKI", "가와사키": "KAWASAKI", "혼다": "HONDA", "CFMOTO": "CFMOTO", "존테스": "ZONTES", "SYM": "SYM", "대림(디앤에이모터스)": "DNA MOTORS", "KR모터스(효성)": "KR MOTORS", "할리데이비슨": "HARLEY-DAVIDSON", "인디언": "INDIAN"};
@@ -520,16 +545,21 @@ function gasPool(){
 function countBy(rows, key){
   const m = new Map();
   /* 브랜드는 한 매장이 여러 개를 달 수 있어 각각 세어 준다 — 합계가 매장 수보다 많다 */
+  /* region 과 gu 는 레코드에 그대로 들어 있지 않다 —
+     권역은 시도를 묶어 만들고, 시군구는 권역에 따라 도 이름이 앞에 붙는다. */
+  const valueOf = key === "region" ? regionOf
+                : key === "gu"     ? guKey
+                : r => r[key];
   if (key === "brand")
     rows.forEach(r => brandsOf(r).forEach(b => m.set(b, (m.get(b)||0)+1)));
   else
-    rows.forEach(r => { const v = r[key] || "기타"; m.set(v, (m.get(v)||0)+1); });
+    rows.forEach(r => { const v = valueOf(r) || "기타"; m.set(v, (m.get(v)||0)+1); });
   const e = [...m.entries()];
   if (key === "brand")
     return e.sort((a,b) => BRAND_SEQ.indexOf(a[0]) - BRAND_SEQ.indexOf(b[0]));
-  if (key === "sido"){
-    const rank = v => { const i = SIDO_SEQ.indexOf(v); return i < 0 ? 99 : i; };
-    return e.sort((a,b) => rank(a[0]) - rank(b[0]) || b[1]-a[1]);
+  if (key === "region"){
+    const rank = v => { const i = REGION_SEQ.indexOf(v); return i < 0 ? 99 : i; };
+    return e.sort((a,b) => rank(a[0]) - rank(b[0]));
   }
   return e.sort((a,b) => b[1]-a[1]);
 }
@@ -919,11 +949,11 @@ function render(){
      'RUN' 은 제목(COFFEE RUN)과 카테고리(COFFEE·GEAR·GAS·PIN)와 같은 말투다.
      뒤에 서울 › 강남구가 붙어 'RUN › 서울 › 강남구' 로 한 줄처럼 읽힌다. */
   const cr = [`<button data-lv="0">${mode === "d" ? "전체 브랜드" : "RUN"}</button>`];
-  if (mode === "gas" && !sido)
+  if (mode === "gas" && !region)
     cr.push(`<span class="cov">아직 일부 지역만 — 매일 채워집니다</span>`);
   if (mode === "d" && brand)
     cr.push("›", `<button data-lv="1">${badge(brand, true)} ${esc(enOf(brand))}</button>`);
-  if (sido) cr.push("›", `<button data-lv="2">${esc(sido)}</button>`);
+  if (region) cr.push("›", `<button data-lv="2">${esc(region)}</button>`);
   if (gu)   cr.push("›", `<span>${esc(gu)}</span>`);
   $("#crumbs").innerHTML = q ? `<span>"${esc(q)}" 검색 결과 ${rows.length}곳</span>` : cr.join(" ");
 
@@ -936,20 +966,20 @@ function render(){
      무조건 목록이라, '내 주변'을 한 번 쓰고 나면 그 뒤로 지역·브랜드 타일이
      통째로 사라졌다 — 제목을 눌러 처음으로 돌아가도 돌아오지 않았다.
      가까운 순으로 보고 싶으면 '내 주변'이 그 일을 한다. 위치는 카드의 거리 표시에만 쓴다. */
-  const drilled = mode === "d" ? (brand && sido) : !!gu;
+  const drilled = mode === "d" ? (brand && region) : !!gu;
   if (q || drilled || rows.length <= 24){
     const sorted = here ? [...rows].sort((a,b) => (dist(a) ?? 9e9) - (dist(b) ?? 9e9)) : rows;
     screen.innerHTML = `<div class="list">${sorted.map((r,i) =>
       r.k === "g" ? gasCard(r) : card(r, DATA.indexOf(r))).join("")}</div>`;
     return;
   }
-  const lvKey = (mode === "d" && !brand) ? "brand" : (sido ? "gu" : "sido");
+  const lvKey = (mode === "d" && !brand) ? "brand" : (region ? "gu" : "region");
   const tiles = countBy(rows, lvKey).filter(([v]) => v && v !== "기타");
   const wide = lvKey === "brand" ? " tiles-wide" : "";
   const isBrand = lvKey === "brand";
   screen.innerHTML = `<div class="tiles${wide}">${tiles.map(([v,n]) => isBrand
     ? brandTile(v, n)
-    : `<button class="tile${lvKey === "sido" && isMetro(v) ? " tile-metro" : ""}" data-v="${esc(v)}">`
+    : `<button class="tile${lvKey === "region" ? " tile-region" : ""}" data-v="${esc(v)}">`
       + `<b>${esc(v)}</b><span>${n}곳</span></button>`
   ).join("")}</div>`;
 }
@@ -958,7 +988,7 @@ function render(){
 $("#modeSeg").addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
   pushHist();
-  mode = b.dataset.m; filter = "ALL"; brand = sido = gu = null; q = "";
+  mode = b.dataset.m; filter = "ALL"; brand = region = gu = null; q = "";
   input.value = ""; syncIO(); nearBar.classList.remove("on"); render();
 });
 $("#filterSeg").addEventListener("click", e => {
@@ -970,8 +1000,8 @@ $("#crumbs").addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
   pushHist();
   const lv = b.dataset.lv;
-  if (lv === "0"){ brand = sido = gu = null; filter = "ALL"; }
-  else if (lv === "1"){ sido = gu = null; }
+  if (lv === "0"){ brand = region = gu = null; filter = "ALL"; }
+  else if (lv === "1"){ region = gu = null; }
   else { gu = null; }
   render();
 });
@@ -981,7 +1011,7 @@ $("#screen").addEventListener("click", e => {
     pushHist();
     const v = tile.dataset.v;
     if (mode === "d" && !brand){ brand = v; filter = "ALL"; }
-    else if (!sido) sido = v;
+    else if (!region) region = v;
     else gu = v;
     render(); return;
   }
@@ -1056,7 +1086,7 @@ syncIO();
    되돌릴 때 그대로 복원한다. 브라우저 히스토리를 쓰지 않는 이유는
    홈화면 앱(standalone)에는 뒤로 갈 주소창이 없어서다 — 스와이프도 안 먹는다. */
 const HIST = [], HIST_MAX = 50;
-const snap = () => ({mode, brand, sido, gu, filter, q, nearKind});
+const snap = () => ({mode, brand, region, gu, filter, q, nearKind});
 const same = (a, b) => a && b && Object.keys(a).every(k => a[k] === b[k]);
 
 function pushHist(){
@@ -1066,7 +1096,7 @@ function pushHist(){
   if (HIST.length > HIST_MAX) HIST.shift();
 }
 function restore(s){
-  mode = s.mode; brand = s.brand; sido = s.sido; gu = s.gu;
+  mode = s.mode; brand = s.brand; region = s.region; gu = s.gu;
   filter = s.filter; q = s.q; nearKind = s.nearKind;
   input.value = q; syncIO();
   nearBar.classList.toggle("on", mode === "near");
@@ -1107,7 +1137,7 @@ qNear.addEventListener("click", () => {
   if (mode === "near"){                       /* 다시 누르면 빠져나온다 */
     mode = "c"; nearBar.classList.remove("on"); render(); return;
   }
-  mode = "near"; filter = "ALL"; brand = sido = gu = null; q = "";
+  mode = "near"; filter = "ALL"; brand = region = gu = null; q = "";
   input.value = ""; syncIO(); nearBar.classList.add("on");
   render();
   if (!here) locate(); 
@@ -1126,13 +1156,13 @@ qPin.addEventListener("click", () => {
   if (!pins.size){ alert("카드의 ☆ 를 눌러 PIN 에 담아보세요."); return; }
   pushHist();
   mode = (mode === "pin") ? "c" : "pin";
-  filter = "ALL"; brand = sido = gu = null; q = ""; input.value = ""; syncIO(); render();
+  filter = "ALL"; brand = region = gu = null; q = ""; input.value = ""; syncIO(); render();
 });
 
 qHome.addEventListener("click", () => {
   pushHist();
   mode = (mode === "home") ? "c" : "home";
-  filter = "ALL"; brand = sido = gu = null; q = "";
+  filter = "ALL"; brand = region = gu = null; q = "";
   input.value = ""; syncIO(); nearBar.classList.remove("on"); render();
 });
 
@@ -1163,7 +1193,7 @@ $("#screen").addEventListener("click", e => {
 
 qReset.addEventListener("click", () => {
   pushHist();
-  mode = "c"; filter = "ALL"; brand = sido = gu = null; q = ""; nearKind = "c";
+  mode = "c"; filter = "ALL"; brand = region = gu = null; q = ""; nearKind = "c";
   input.value = ""; syncIO(); nearBar.classList.remove("on");
   document.querySelectorAll(".card.open").forEach(c => c.classList.remove("open"));
   window.scrollTo({top: 0, behavior: "smooth"});
