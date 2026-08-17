@@ -646,12 +646,21 @@ $("#screen").addEventListener("click", e => {
   }
   const head = e.target.closest(".card-head");
   if (head){
+    /* 아코디언 — 한 번에 하나만 연다. 카드가 펼쳐지면 화면이 길어져서
+       두 개가 동시에 열리면 목록을 훑기가 어렵다. */
     const card = head.parentElement;
-    card.classList.toggle("open");
-    if (card.classList.contains("open")){
-      const r = DATA[+card.dataset.i];
-      if (r) { touch(r); }
-    }
+    const wasOpen = card.classList.contains("open");
+    document.querySelectorAll(".card.open").forEach(c => c.classList.remove("open"));
+    if (wasOpen) return;                 /* 열린 걸 다시 누르면 닫기만 */
+    card.classList.add("open");
+    const r = DATA[+card.dataset.i];
+    if (r) touch(r);
+    /* 위쪽 카드를 닫으면서 화면이 줄어들면 방금 연 카드가 시야 밖으로 밀린다 */
+    requestAnimationFrame(() => {
+      const top = card.getBoundingClientRect().top;
+      if (top < 0 || top > innerHeight * 0.55)
+        card.scrollIntoView({block: "start", behavior: "smooth"});
+    });
   }
 });
 
