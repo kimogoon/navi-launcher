@@ -121,6 +121,7 @@ h1 small{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.02em;
 .seg button{
   font:600 13px/1 var(--sans);padding:8px 12px;border-radius:999px;cursor:pointer;
   border:1px solid var(--line);background:var(--surface);color:var(--fg2);
+  white-space:nowrap;                 /* 'GAS STATION' 이 두 줄로 접히면 칩 모양이 깨진다 */
 }
 /* 활성 표시는 색을 꽉 채우지 않는다 — 칩이 여러 줄이라 진하게 칠하면 화면이 무거워진다.
    옅은 바탕 + 진한 글자 + 또렷한 테두리로 구분한다. */
@@ -289,6 +290,7 @@ h1 small{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.02em;
 .nearbar.on{display:flex;flex-wrap:wrap}
 /* 4종이라 좁은 화면에서는 두 줄로 접힌다 — 한 줄에 밀어 넣으면 글자가 눌린다 */
 .nearbar button{flex:1 1 22%;min-width:78px;font:600 12.5px/1 var(--sans);padding:9px 6px;border-radius:9px;
+  white-space:nowrap;
   cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--fg2)}
 .nearbar button[aria-pressed=true]{
   background:var(--sel-bg);border-color:var(--sel-line);color:var(--sel-fg);font-weight:700}
@@ -326,7 +328,7 @@ button:focus-visible,a:focus-visible,.tile:focus-visible{outline:2px solid var(-
     <button data-nk="c" aria-pressed="true">COFFEE</button>
     <button data-nk="d" aria-pressed="false">SHOP</button>
     <button data-nk="s" aria-pressed="false">GEAR</button>
-    <button data-nk="gas" aria-pressed="false">GAS</button>
+    <button data-nk="gas" aria-pressed="false">GAS STATION</button>
   </div>
   <div id="modeSeg" class="seg"></div>
   <div id="filterSeg" class="seg"></div>
@@ -841,7 +843,7 @@ function render(){
   const modeCount = v => v === "gas" ? gasPool().length : DATA.filter(r => r.k === v).length;
   /* 카테고리 이름은 영문 한 단어로. 칩이 여섯 개라 한글 네 글자씩 붙으면 두 줄로 접힌다.
      판매·정비·부품·전시가 한데 있는 자리라 SHOP 으로 묶는다. */
-  $("#modeSeg").innerHTML = [["c","COFFEE"],["d","SHOP"],["s","GEAR"],["gas","GAS"]]
+  $("#modeSeg").innerHTML = [["c","COFFEE"],["d","SHOP"],["s","GEAR"],["gas","GAS STATION"]]
     .filter(([v]) => modeCount(v) > 0)
     .map(([v,l]) =>
     `<button data-m="${v}" aria-pressed="${mode===v}">${l}<span class="n">${modeCount(v)}</span></button>`).join("")
@@ -851,7 +853,7 @@ function render(){
   /* 필터 세그 */
   if (mode === "near"){
     $("#filterSeg").innerHTML = "";
-    const label = {c:"COFFEE", d:"SHOP", s:"GEAR", gas:"GAS"}[nearKind];
+    const label = {c:"COFFEE", d:"SHOP", s:"GEAR", gas:"GAS STATION"}[nearKind];
     if (!here){
       $("#crumbs").innerHTML = `<span>위치를 확인하는 중…</span>`;
       $("#screen").innerHTML = `<p class="empty">위치 접근을 허용하면 가까운 순으로 보여드립니다.</p>`;
