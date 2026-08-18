@@ -176,10 +176,25 @@ window.__run = function () {
 
   ok("첫 화면은 큰 원", !!$("#runbig") && !$("#screen > .list"));
   ok("원에 REGION 글자 없음", !$(".runbig .rs"));
-  ok("COFFEE 첫 칸은 RUN", txt($("#bstrip").children[0]) === "RUN", txt($("#bstrip").children[0]));
+  ok("COFFEE 첫 칸은 GO", txt($("#bstrip").children[0]) === "GO", txt($("#bstrip").children[0]));
+  ok("GO 는 지역명보다 크다", (() => {
+    const go = $("#bstrip").children[0], region = $("#bstrip").children[1];
+    return parseFloat(getComputedStyle(go).fontSize) > parseFloat(getComputedStyle(region).fontSize);
+  })());
+  ok("GO 가 원 가운데에 온다", (() => {
+    const go = $("#bstrip").children[0];
+    const range = document.createRange(); range.selectNodeContents(go);
+    const t = range.getBoundingClientRect(), c = $("#runbig").getBoundingClientRect();
+    return Math.abs((t.left + t.right) / 2 - (c.left + c.right) / 2) <= 2;
+  })(), (() => {
+    const go = $("#bstrip").children[0];
+    const range = document.createRange(); range.selectNodeContents(go);
+    const t = range.getBoundingClientRect(), c = $("#runbig").getBoundingClientRect();
+    return `${Math.round((t.left+t.right)/2 - (c.left+c.right)/2)}px`;
+  })());
   ok("COFFEE 도 권역이 흐름", (() => {
     const names = [...$("#bstrip").children].map(x => txt(x));
-    return names[0] === "RUN" && names.slice(1).every(n => REGION_SEQ.includes(n));
+    return names[0] === "GO" && names.slice(1).every(n => REGION_SEQ.includes(n));
   })(), [...$("#bstrip").children].map(x => txt(x)).join("|"));
   ok("COFFEE 에만 날씨", !!$(".runbig .wx"));
   ok("원이 정원", (() => { const r = $("#runbig").getBoundingClientRect();
@@ -561,17 +576,17 @@ window.__run = function () {
   ok("standalone 지정", $('meta[name="apple-mobile-web-app-capable"]')?.content === "yes");
   ok("viewport-fit=cover", ($('meta[name="viewport"]')?.content || "").includes("viewport-fit=cover"));
 
-  /* 원이 아래 로고를 덮으면 안 된다.
-     dvh 로 크기를 잡던 때, 주소창이 보이는 사파리에서 FURYCLASSIC 글자가 잘렸다.
-     이제는 남은 자리를 실제로 재서 넣는다(fitCircle) — 그게 지켜지는지 본다. */
+  /* 원이 화면 밖으로 넘치면 안 된다.
+     예전엔 아래 로고를 덮는지를 봤는데, 로고를 없애면서 기준을 화면 자체로 옮겼다.
+     남은 자리를 실제로 재서 넣는다(fitCircle) — 그게 지켜지는지 본다. */
   $("h1 #qReset").click();
   ok("원 크기를 잰 값으로 넣는다",
      /^\d+px$/.test(document.documentElement.style.getPropertyValue("--circle")),
      document.documentElement.style.getPropertyValue("--circle"));
-  const overlap = () => {
-    const big = $("#runbig"), br = $(".brand");
-    if (!big || !br) return null;
-    return Math.round(big.getBoundingClientRect().bottom - br.getBoundingClientRect().top);
+  const overflow = () => {
+    const big = $("#runbig");
+    if (!big) return null;
+    return Math.round(big.getBoundingClientRect().bottom - innerHeight);
   };
   const roundOk = () => { const b = $("#runbig").getBoundingClientRect();
     return Math.abs(b.width - b.height) < 1 && b.width > 0; };
@@ -580,46 +595,17 @@ window.__run = function () {
   ["c", "s", "gas"].forEach(m => {
     $(`[data-m="${m}"]`)?.click();
     if (!$("#runbig")) return;
-    worst = Math.max(worst, overlap());
+    worst = Math.max(worst, overflow());
     if (!roundOk()) notRound.push(m);
   });
   $("h1 #qReset").click();
-  ok("원이 로고를 덮지 않는다", worst < 0, `${worst}px`);
+  ok("원이 화면 밖으로 넘치지 않는다", worst <= 0, `${worst}px`);
   ok("원은 언제나 동그랗다", notRound.length === 0, notRound.join(","));
-  ok("슬로건이 화면 안에 있다",
-     $(".slogan").getBoundingClientRect().bottom <= innerHeight + 1,
-     `${Math.round($(".slogan").getBoundingClientRect().bottom)}/${innerHeight}`);
-  ok("세로 스크롤 없음",
+  ok("document 는 스크롤 안 함(스크롤은 .scrollarea 몫)",
      document.documentElement.scrollHeight - document.documentElement.clientHeight <= 0,
      `${document.documentElement.scrollHeight - document.documentElement.clientHeight}`);
 
-  /* 큰 원 오른쪽 아래에 붙은 집 — RUN 과 같은 자리에서 손이 닿아야 한다 */
-  $("h1 #qReset").click();
-  const rhome = $("#runhome"), rbig = $("#runbig");
-  ok("원에 집 아이콘", !!rhome);
-  if (rhome){
-    const rb = rhome.getBoundingClientRect(), bb = rbig.getBoundingClientRect();
-    ok("집은 원 오른쪽 아래", rb.right >= bb.right - 6 && rb.bottom >= bb.bottom - 6,
-       `${Math.round(rb.right - bb.right)},${Math.round(rb.bottom - bb.bottom)}`);
-    ok("집도 동그랗다", Math.abs(rb.width - rb.height) < 1 &&
-       getComputedStyle(rhome).borderRadius.startsWith("50"));
-    ok("집 손가락 크기", rb.width >= 44, `${Math.round(rb.width)}`);
-    ok("집 아이콘 보임", rhome.querySelector("svg") &&
-       getComputedStyle(rhome).display !== "none");
-    /* 깊이 들어간 상태에서 눌러 맨 앞으로 돌아오는지 본다.
-       원을 누른 것으로 새면 목록이 열려 버린다 — 그것도 함께 걸린다. */
-    $('[data-m="d"]').click(); railPick("YAMAHA"); search("서울");
-    const before = `${mode}/${brand}/${q}`;
-    $("#runbig") ? $("#runhome").click() : $("h1 #qReset").click();
-    ok("처음 화면으로 돌아간다",
-       mode === "c" && !brand && !region && !q && !nearOn,
-       `${before} → ${mode}/${brand}/${q}`);
-    ok("돌아오면 큰 원이 다시 보인다", !!$("#runbig"));
-    $("h1 #qReset").click();
-  } else {
-    ["집은 원 오른쪽 아래","집도 동그랗다","집 손가락 크기","집 아이콘 보임",
-     "처음 화면으로 돌아간다","돌아오면 큰 원이 다시 보인다"].forEach(n => ok(n, false));
-  }
+  ok("원에 집 아이콘 없음", !$("#runhome"));   /* 제목을 누르면 처음으로 가므로 뺐다 */
 
   /* 아이폰 확인창 — 카카오내비는 유니버설 링크로 없앴다. T맵은 AASA 가 없어 불가능하다. */
   $('[data-m="s"]').click(); if ($("#runbig")) $("#runbig").click();
@@ -633,6 +619,19 @@ window.__run = function () {
      `${kk?.tagName} ${kk?.getAttribute("href") || kk?.dataset.navi || ""}`.slice(0, 60));
   ok("카카오내비도 목적지를 복사한다", !!kk?.dataset.clip, kk?.dataset.clip);
   ok("동기 복사 함수가 있다", typeof copyNow === "function");
+  /* '현재 위치' 는 동 이름으로 바꿔 보여준다 — 실제 네트워크 호출은 50회씩 돌리기엔
+     느리고 외부 API 의존이라, 여기서는 배선만 확인한다(here 에만 geo 플래그,
+     함수 존재). 실제 변환은 수동으로 두 좌표(서울 역삼·강원 산간)로 확인했다. */
+  ok("reverseGeo 함수가 있다", typeof reverseGeo === "function");
+  /* home 은 이 테스트 파일에서 '처음으로' 헬퍼 이름으로 이미 쓰고 있어(위 13번째 줄)
+     여기서 앱의 전역 home(등록된 집) 을 직접 건드릴 수 없다 — here 쪽만 확인한다. */
+  ok("'현재 위치' 는 geo 로 표시된다", (() => {
+    const keepHere = here;
+    here = {lat: 37.5, lon: 127};
+    const got = wxPoint().geo === true;
+    here = keepHere;
+    return got;
+  })());
   search(""); home();
 
   /* 사용법 — 공지를 누르면 열리고, 화면 아무 데나 한 번 더 누르면 닫힌다 */
@@ -883,10 +882,21 @@ window.__run = function () {
      document.documentElement.scrollHeight <= innerHeight + 1,
      `${document.documentElement.scrollHeight} / ${innerHeight}`);
   ok("가로로도 넘치지 않음", document.documentElement.scrollWidth <= innerWidth + 1);
-  ok("슬로건까지 한 화면에", (() => {
-    const b = $(".slogan").getBoundingClientRect();
-    return b.top >= 0 && b.bottom <= innerHeight + 1;
-  })(), `${Math.round($(".slogan").getBoundingClientRect().bottom)} / ${innerHeight}`);
+  ok("제목 옆 by FURYCLASSIC", txt($("h1 .by")).replace(/\s+/g," ") === "by FURYCLASSIC");
+  ok("by 가 제목 아랫선에 맞음", (() => {
+    /* 버튼 박스 바닥이 아니라 'COFFEE RUN' 글자 자체의 바닥과 비교한다 —
+       버튼은 줄높이(line-height) 만큼 글자보다 여유가 있어 그걸 기준으로 삼으면 늘 어긋난다. */
+    const titleNode = [...$("h1 button").childNodes].find(n => n.nodeType === 3);
+    const range = document.createRange();
+    range.selectNodeContents(titleNode);
+    const title = range.getBoundingClientRect();
+    const by = $("h1 .by").getBoundingClientRect();
+    return Math.abs(by.bottom - title.bottom) <= 8;
+  })(), (() => {
+    const titleNode = [...$("h1 button").childNodes].find(n => n.nodeType === 3);
+    const range = document.createRange(); range.selectNodeContents(titleNode);
+    return `${Math.round($("h1 .by").getBoundingClientRect().bottom)}/${Math.round(range.getBoundingClientRect().bottom)}`;
+  })());
   ok("원이 화면 안에", (() => {
     const b = $("#runbig").getBoundingClientRect();
     return b.top >= 0 && b.bottom <= innerHeight + 1;
@@ -907,7 +917,6 @@ window.__run = function () {
      `${document.documentElement.scrollHeight} / ${innerHeight}`);
   ok("목록이 길어도 헤더는 화면 안에",
      $(".head").getBoundingClientRect().top >= 0);
-  ok("목록이 길어도 슬로건이 보임", $(".slogan").getBoundingClientRect().bottom <= innerHeight + 1);
   ok("카드가 화면 폭에 꽉 참", (() => {
     const w = $("#screen .card").getBoundingClientRect().width;
     return w > innerWidth * 0.9 && w <= innerWidth;

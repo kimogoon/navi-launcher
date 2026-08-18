@@ -58,8 +58,8 @@
   --red-bg:#2C1416; --red-fg:#FF7A72; --red-line:#5C2A28;
 }
 *{box-sizing:border-box}
-/* 제목·검색·카테고리·퀵바(헤더)와 로고(푸터)는 화면에 고정하고,
-   그 사이 목록만 위아래로 스크롤한다 — 손가락 하나로 쓸어내리는 익숙한 방식이다.
+/* 제목·검색·카테고리·퀵바(헤더)는 화면 위에 고정하고, 그 아래 목록만 위아래로
+   스크롤한다 — 손가락 하나로 쓸어내리는 익숙한 방식이다.
    body 자체는 스크롤하지 않는다 — 스크롤은 .scrollarea 하나가 맡는다. */
 html,body{margin:0;background:var(--bg);color:var(--fg);
   height:100%;overflow:hidden;overscroll-behavior:none}
@@ -76,11 +76,11 @@ body{
   max-width:760px;margin:0 auto;padding:14px 16px 10px;width:100%;
   flex:1;min-height:0;display:flex;flex-direction:column;gap:0;
 }
-/* 헤더와 로고는 .scrollarea 밖에 있는 형제라 스크롤 내용과 겹칠 일이 없다 —
-   position:sticky 나 음수 마진 없이도 '위아래는 고정, 가운데만 스크롤' 이 그대로 된다. */
+/* 헤더는 .scrollarea 밖에 있는 형제라 스크롤 내용과 겹칠 일이 없다 —
+   position:sticky 나 음수 마진 없이도 '위는 고정, 아래만 스크롤' 이 그대로 된다. */
 .head{flex:none}
 .head.stuck{border-bottom:1px solid var(--line2)}   /* 목록을 내리면 경계선으로 알려준다 */
-/* 헤더와 로고 사이 — 목록이 위아래로 흐르는 자리. 화면보다 짧으면 그냥 다 보이고,
+/* 헤더 아래 — 목록이 위아래로 흐르는 자리. 화면보다 짧으면 그냥 다 보이고,
    길면 이 안에서만 스크롤된다(document 전체가 아니라). */
 .scrollarea{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;
   -webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;
@@ -94,8 +94,16 @@ h1{
   margin:0 0 10px;font-size:clamp(25px,6.4vw,36px);font-weight:900;
   letter-spacing:-.035em;font-style:italic;
 }
-h1 small{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.02em;
-  font-style:normal;color:var(--fg3);margin-top:5px}
+/* 제목 옆 작은 브랜드 표기 — 로고를 없앤 자리를 대신한다.
+   큰 제목은 이탤릭이라, 반듯이 세운 대문자로 대비를 주고 앞에 로고의 붉은 사선을 되살렸다. */
+/* 제목 글자의 아래선에 맞춘다 — vertical-align:middle 은 큰 이탤릭체의
+   위아래 중간에 걸려 눈에 붕 떠 보였다. baseline 이 실제 글줄 바닥이다. */
+h1 .by{display:inline-flex;align-items:flex-end;gap:6px;vertical-align:baseline;
+  margin-left:10px;font:700 clamp(9px,2.6vw,11px)/1 var(--sans);font-style:normal;
+  letter-spacing:.07em;text-transform:uppercase;color:var(--fg3)}
+h1 .by::before{content:"";flex:none;width:11px;height:2px;background:var(--red);
+  transform:skewX(-18deg);margin-bottom:.1em}
+h1 .by b{font-weight:800;color:var(--fg2);letter-spacing:.05em}
 /* Notice — 제목 바로 아래. FURYCLASSIC 워드마크가 기울어 있어 태그도 같은 각도로 눕힌다.
    빨강은 이 페이지에서 브랜드 자리에만 쓰는 색이라, 여기 한 칸만 채우고 글은 회색으로 둔다. */
 .notice{display:flex;align-items:center;gap:9px;margin:-4px 0 10px;
@@ -302,6 +310,14 @@ h1 small{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.02em;
      오른쪽에 여백으로 돌려주면 눈으로 보기에 가운데가 맞는다. */
   padding-right:.055em;
 }
+/* COFFEE 첫 칸(GO) — 지역명들과 같은 공식으로 재면 둘 다 '두 글자, 최대 배율' 이라
+   똑같은 크기가 된다. GO 는 지역이 아니라 '들어가기' 버튼이라 한 단계 더 키운다. */
+/* 자간 -.07em 은 글자가 많은 브랜드명 기준으로 잡은 값이라, 틈이 하나뿐인
+   두 글자(GO)에서는 그 좁은 간격이 두드러져 붙어 보인다. 느슨하게 풀어 준다. */
+.runbig .rw.go{font-size:calc(var(--fit,1) * clamp(68px,23vw,116px));letter-spacing:-.01em;
+  padding-right:0}   /* .rw 의 공용 여백(.055em)은 -.07em 자간을 전제로 잡은 값이라,
+                        GO 처럼 자간을 풀면 그 여백이 오히려 중심을 왼쪽으로 밀었다 —
+                        재서 0으로 뺐다. 폭 320~430 전 구간에서 중심 오차 0px. */
 
 /* SHOP — 원은 가만히 있고 브랜드 이름만 좌우로 흐른다.
    원이 통째로 움직이면 시선이 따라다녀야 해서 어지럽다. 창은 고정, 내용만 넘긴다. */
@@ -340,28 +356,6 @@ h1 small{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.02em;
 .runbig .wx.warn .d b{color:#FFC94A;opacity:1}
 .runring:has(.runbig.wet){border-color:rgba(225,6,0,.45)}
 
-/* 처음으로 — 큰 원의 오른쪽 아래에 붙는 작은 원.
-   RUN 을 누르면 안으로 들어가고, 여기를 누르면 맨 앞으로 돌아온다.
-   제목을 눌러도 같지만, 화면 아래쪽을 보던 손이 맨 위까지 올라가지 않아도 된다. */
-/* 크기는 %로 잡지 않는다. 감싼 링의 높이가 내용에 따라 정해지는 자리라
-   퍼센트가 auto 로 풀려 단추가 세로로 늘어났다(55×92). fitCircle 이 원 지름을 잴 때
-   집 지름도 함께 px 로 넣어 준다(--home). */
-.runhome{
-  position:absolute;right:-2px;bottom:-2px;
-  width:var(--home,56px);height:var(--home,56px);min-height:0;border-radius:50%;
-  border:2px solid var(--bg);background:var(--on-bg);color:var(--on-fg);
-  display:flex;align-items:center;justify-content:center;cursor:pointer;
-  padding:0;line-height:0;
-  box-shadow:0 10px 22px -12px rgba(0,0,0,.85);
-  transition:transform .12s ease;
-}
-.runhome svg{width:44%;height:44%;flex:none;fill:none;stroke:currentColor;stroke-width:1.9;
-  stroke-linecap:round;stroke-linejoin:round}
-.runhome:active{transform:scale(.93)}
-/* 집을 아직 등록하지 않았으면 비워 둔 자리처럼 보이게 한다 — 눌러 보라는 뜻이다 */
-/* 클래스 이름에 empty 를 쓰지 않는다 — 목록이 비었을 때 쓰는 .empty 가
-   padding:44px 0 을 걸고 있어, 같이 물면 단추가 세로로 늘어난다(55×92 가 나왔다). */
-@media (prefers-reduced-motion:reduce){.runhome{transition:none}}
 /* #screen 은 이제 .scrollarea 안에 있다 — 짧으면(원 화면) 가운데로,
    길면(목록) .scrollarea 가 대신 스크롤해 준다. */
 #screen{flex:1;display:flex;flex-direction:column}
@@ -460,11 +454,6 @@ h1 small{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.02em;
 .empty{padding:44px 0;text-align:center;color:var(--fg3);font-size:14px}
 /* 브랜드 서명 — 길안내 런처와 동일. 워드마크는 패스 변환된 인라인 SVG라
    폰트 설치와 무관하게 같게 보이고 currentColor 로 다크/라이트 자동 대응. */
-.brand{flex:none;margin:0;padding-top:10px;text-align:center}
-.brand-cut{display:block;width:46px;height:3px;margin:0 auto 8px;
-  background:var(--red);transform:skewX(-18deg);border-radius:1px}
-.wordmark{display:block;width:min(158px,46%);height:auto;margin:0 auto;color:var(--fg2)}
-.slogan{margin:6px 0 0;font-size:9px;letter-spacing:.13em;text-transform:uppercase;color:var(--fg3)}
 /* 입력창 안쪽 버튼 — 비어 있으면 붙여넣기, 글자가 있으면 지우기 */
 .io{position:absolute;right:7px;top:50%;transform:translateY(-50%);
   width:34px;height:34px;border:0;background:transparent;cursor:pointer;
@@ -528,7 +517,7 @@ button:focus-visible,a:focus-visible,.tile:focus-visible{outline:2px solid var(-
 </head><body>
 <div class="wrap">
   <header class="head">
-  <h1><button id="qReset" type="button" class="home-title">COFFEE RUN</button></h1>
+  <h1><button id="qReset" type="button" class="home-title">COFFEE RUN<span class="by">by <b>FURYCLASSIC</b></span></button></h1>
   <button class="notice" id="noticeBtn" type="button" aria-haspopup="dialog"><b>Notice</b><i aria-hidden="true"></i><span>지금은 89라이더스 테스트기간입니다.</span><em aria-hidden="true">사용법</em></button>
 
   <div class="search-wrap">
@@ -561,11 +550,6 @@ button:focus-visible,a:focus-visible,.tile:focus-visible{outline:2px solid var(-
   <div id="screen"></div>
   </div>
 
-  <div class="brand">
-    <span class="brand-cut" aria-hidden="true"></span>
-    <svg class="wordmark" viewBox="0 0 7550 732" role="img" aria-label="FURYCLASSIC"><g transform="translate(-2,716) scale(1,-1)" fill="currentColor"><path transform="translate(0,0)" d="M342 522 318 402H610L574 224H283L238 0H2L142 700H711L675 522Z"/><path transform="translate(650,0)" d="M51 241Q51 273 59 315L136 700H372L296 319Q290 291 290 268Q290 221 314.0 198.0Q338 175 384 175Q436 175 465.0 208.0Q494 241 510 319L586 700H818L739 305Q707 146 611.0 65.0Q515 -16 355 -16Q261 -16 192.5 15.5Q124 47 87.5 105.0Q51 163 51 241Z"/><path transform="translate(1440,0)" d="M558 204 675 0H430L331 176H273L238 0H2L142 700H456Q594 700 670.5 639.5Q747 579 747 470Q747 377 697.5 307.5Q648 238 558 204ZM420 518H341L308 354H405Q454 354 481.0 378.5Q508 403 508 447Q508 518 420 518Z"/><path transform="translate(2191,0)" d="M468 254 418 0H182L233 257L58 700H295L390 458L585 700H822Z"/><path transform="translate(2907,0)" d="M41 297Q41 419 97.5 514.0Q154 609 254.5 662.5Q355 716 483 716Q584 716 662.0 679.5Q740 643 778 576L608 443Q561 525 468 525Q413 525 370.0 498.0Q327 471 303.0 422.5Q279 374 279 312Q279 250 318.5 212.5Q358 175 423 175Q512 175 579 256L718 123Q657 48 579.5 16.0Q502 -16 400 -16Q293 -16 211.5 23.5Q130 63 85.5 134.0Q41 205 41 297Z"/><path transform="translate(3657,0)" d="M142 700H378L275 183H591L554 0H2Z"/><path transform="translate(4280,0)" d="M512 122H245L175 0H-74L372 700H604L770 0H535ZM479 292 445 471 342 292Z"/><path transform="translate(5092,0)" d="M-23 55 68 229Q181 164 304 164Q349 164 373.0 175.0Q397 186 397 205Q397 223 372.5 234.0Q348 245 295 258Q225 276 179.0 294.5Q133 313 98.5 351.5Q64 390 64 453Q64 532 106.5 591.5Q149 651 229.0 683.5Q309 716 418 716Q496 716 563.5 700.5Q631 685 680 656L595 484Q554 510 504.5 523.0Q455 536 403 536Q354 536 327.0 522.0Q300 508 300 489Q300 470 324.5 459.0Q349 448 405 435Q473 419 519.5 401.0Q566 383 600.0 345.0Q634 307 634 245Q634 167 591.0 108.0Q548 49 468.0 16.5Q388 -16 280 -16Q189 -16 109.0 3.5Q29 23 -23 55Z"/><path transform="translate(5755,0)" d="M-23 55 68 229Q181 164 304 164Q349 164 373.0 175.0Q397 186 397 205Q397 223 372.5 234.0Q348 245 295 258Q225 276 179.0 294.5Q133 313 98.5 351.5Q64 390 64 453Q64 532 106.5 591.5Q149 651 229.0 683.5Q309 716 418 716Q496 716 563.5 700.5Q631 685 680 656L595 484Q554 510 504.5 523.0Q455 536 403 536Q354 536 327.0 522.0Q300 508 300 489Q300 470 324.5 459.0Q349 448 405 435Q473 419 519.5 401.0Q566 383 600.0 345.0Q634 307 634 245Q634 167 591.0 108.0Q548 49 468.0 16.5Q388 -16 280 -16Q189 -16 109.0 3.5Q29 23 -23 55Z"/><path transform="translate(6418,0)" d="M142 700H378L238 0H2Z"/><path transform="translate(6774,0)" d="M41 297Q41 419 97.5 514.0Q154 609 254.5 662.5Q355 716 483 716Q584 716 662.0 679.5Q740 643 778 576L608 443Q561 525 468 525Q413 525 370.0 498.0Q327 471 303.0 422.5Q279 374 279 312Q279 250 318.5 212.5Q358 175 423 175Q512 175 579 256L718 123Q657 48 579.5 16.0Q502 -16 400 -16Q293 -16 211.5 23.5Q130 63 85.5 134.0Q41 205 41 297Z"/></g></svg>
-    <p class="slogan">Where You Stand Becomes The Studio</p>
-  </div>
 </div>
 
 <!-- 사용법 — 공지를 누르면 열리고, 화면을 한 번 더 누르면 닫힌다.
@@ -574,21 +558,26 @@ button:focus-visible,a:focus-visible,.tile:focus-visible{outline:2px solid var(-
   <div class="guide-card">
     <h2>COFFEE RUN 사용법</h2>
     <dl>
-      <dt>가운데 큰 원</dt>
-      <dd>좌우로 넘겨 지역이나 브랜드를 고르고, 원을 누르면 그 목록이 열립니다.
-          COFFEE는 담아 둔 곳, GAS STATION은 내 주변이 바로 켜집니다.</dd>
-      <dt>원 오른쪽 아래 집</dt>
-      <dd>어디까지 들어갔든 첫 화면으로 한 번에 돌아옵니다.</dd>
+      <dt>COFFEE RUN 제목</dt>
+      <dd>어디까지 들어갔든 눌러서 첫 화면으로 한 번에 돌아옵니다.</dd>
+      <dt>COFFEE — 가운데 큰 원</dt>
+      <dd>좌우로 넘겨 권역을 고르고, 원을 누르면 그 목록이 열립니다.
+          원 안엔 지금 날씨도 뜨고, 비·눈이면 원이 빨갛게 바뀝니다.</dd>
+      <dt>SHOP — 브랜드 타일</dt>
+      <dd>제조사 아이콘을 눌러 그 브랜드 매장만 봅니다. '전체 브랜드'를 누르면
+          전부 나옵니다.</dd>
+      <dt>GEAR · GAS STATION</dt>
+      <dd>고를 게 없어 칩을 누르면 바로 목록입니다. GAS STATION은 '내 주변'도
+          함께 켜집니다.</dd>
       <dt>위쪽 네 칸</dt>
       <dd><b>내 주변</b> 지금 보는 것 중 가까운 순 · <b>집</b> 등록해 둔 집으로 안내 ·
           <b>PIN</b> 별표로 담아 둔 곳 · <b>뒤로</b> 한 단계 되돌리기</dd>
       <dt>카드를 누르면</dt>
-      <dd>내비 앱을 골라 바로 안내가 시작됩니다.
+      <dd>T맵·네이버지도·카카오내비 중 골라 바로 안내가 시작됩니다.
           카카오내비만 목적지를 복사해 주니, 열린 검색창에 붙여넣으세요.</dd>
       <dt>그밖에</dt>
-      <dd>COFFEE 화면 원 안에 지금 날씨가 뜨고, 비·눈이면 원이 빨갛게 바뀝니다.
-          주유소는 일반·고급 시세가 카드에 적힙니다.
-          화면은 위아래로 움직이지 않습니다 — 목록은 좌우로 넘겨 보세요.</dd>
+      <dd>주유소는 일반·고급 시세가 카드에 적힙니다.
+          제목·검색·카테고리는 화면 위에 고정되고, 목록만 위아래로 스크롤됩니다.</dd>
     </dl>
     <p class="guide-close">화면을 한 번 더 누르면 닫힙니다</p>
   </div>
@@ -650,10 +639,6 @@ function fitCircle(){
   const now = document.documentElement.style.getPropertyValue("--circle");
   if (now === d + "px") return;               /* 같은 값이면 건드리지 않는다 */
   document.documentElement.style.setProperty("--circle", d + "px");
-  /* 원에 붙는 집도 같이 정한다 — 원의 15%, 다만 손가락이 닿을 48px 아래로는 안 내린다 */
-  const dia = Math.min(innerWidth * 0.88, 420, d);
-  document.documentElement.style.setProperty(
-    "--home", Math.round(Math.max(48, Math.min(64, dia * 0.15))) + "px");
 }
 let pins = new Set(readLS(PIN_KEY, []));
 let recent = readLS(RECENT_KEY, []);
@@ -1229,8 +1214,28 @@ const WX_SVG = {
 
 function wxPoint(){
   if (home && Number.isFinite(home.lat)) return {lat: home.lat, lon: home.lon, label: "집 기준"};
-  if (here) return {lat: here.lat, lon: here.lon, label: "현재 위치"};
+  if (here) return {lat: here.lat, lon: here.lon, label: "현재 위치", geo: true};
   return SEOUL;
+}
+
+/* '현재 위치' 대신 실제 동 이름 하나만 보여준다 — 시·구까지 다 적으면 글자가 길어져
+   원 안에서 줄어들거나 잘린다. 좌표만 봐서는 어디인지 모르니 동만 짚어 준다.
+   카카오 로컬 API 는 REST 키가 있어야 하는데, 클라이언트 코드에 키를 심을 수 없다
+   (그 키는 서버 스크립트에만 둔다). BigDataCloud 의 reverse-geocode-client 는
+   키 없이 브라우저에서 바로 쓰라고 만든 무료 API라 이 자리에 맞는다.
+   행정동(레벨 8)이 없는 자리(읍·면 지역)는 구·시로 물러선다. */
+async function reverseGeo(lat, lon){
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 5000);
+    const u = `https://api.bigdatacloud.net/data/reverse-geocode-client`
+      + `?latitude=${lat}&longitude=${lon}&localityLanguage=ko`;
+    const j = await (await fetch(u, {signal: ctrl.signal})).json();
+    clearTimeout(timer);
+    const admin = (j.localityInfo && j.localityInfo.administrative) || [];
+    const byLevel = lvl => (admin.find(a => a.adminLevel === lvl) || {}).name;
+    return byLevel(8) || j.locality || byLevel(6) || j.city || null;
+  } catch(e){ return null; }
 }
 
 async function loadWx(force){
@@ -1240,9 +1245,12 @@ async function loadWx(force){
   try {
     const u = `https://api.open-meteo.com/v1/forecast?latitude=${p.lat}&longitude=${p.lon}`
       + `&current=temperature_2m,weather_code&timezone=Asia%2FSeoul`;
-    const j = await (await fetch(u)).json();
+    const [j, place] = await Promise.all([
+      fetch(u).then(r => r.json()),
+      p.geo ? reverseGeo(p.lat, p.lon) : Promise.resolve(null),
+    ]);
     wx = {t: Math.round(j.current.temperature_2m), code: j.current.weather_code,
-          label: p.label, at: Date.now()};
+          label: p.label, place, at: Date.now()};
     try { sessionStorage.setItem(WX_KEY, JSON.stringify(wx)); } catch(e){}
   } catch(e){ wx = wx || null; }
   return wx;
@@ -1256,7 +1264,7 @@ function wxHTML(){
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${WX_SVG[icon]}</svg>
     <span class="t">${wx.t}°</span>
-    <span class="d"><b>${label}</b><span>${wx.label}</span></span>
+    <span class="d"><b>${label}</b><span>${esc(wx.place || wx.label)}</span></span>
   </span>`;
 }
 
@@ -1309,7 +1317,7 @@ function renderRunbar(){
   const parts = [];
   if (mode === "d" && brand) parts.push(enOf(brand));
   if (region) parts.push(region);
-  const label = parts.length ? parts.join(" · ") : "RUN";
+  const label = parts.length ? parts.join(" · ") : "GO";
   const btn = `<button class="runbtn" id="runbtn" type="button" aria-expanded="${railOpen}">`
     + `<span class="rl">${esc(label)}</span>`
     + `<span class="rc" aria-hidden="true"></span></button>`;
@@ -1448,9 +1456,9 @@ function render(){
        지역을 고르러 목록까지 들어갔다 나올 이유가 없다. */
     const wet = wx && isWet(wx.code) ? " wet" : "";
     const has = new Set(DATA.filter(r => r.k === "c").map(regionOf));
-    const names = ["RUN", ...REGION_SEQ.filter(n => has.has(n))];
+    const names = ["GO", ...REGION_SEQ.filter(n => has.has(n))];
     const inner = `<div class="bwin"><div class="bstrip" id="bstrip">`
-      + names.map(n => `<span class="rw" style="--fit:${fitScale(n)}">${esc(n)}</span>`).join("")
+      + names.map(n => `<span class="rw${n === "GO" ? " go" : ""}" style="--fit:${fitScale(n)}">${esc(n)}</span>`).join("")
       + `</div></div>`;
     /* COFFEE 에서만 도는 자리라 날씨는 늘 켠다 */
     const showWx = true;
@@ -1458,9 +1466,6 @@ function render(){
       <div class="runring"><div class="runbig${showWx ? wet : ""}" id="runbig" role="button" tabindex="0"
            aria-label="목록 열기">`   /* mode d 는 이 자리에 오지 않는다 */
       + inner + (showWx ? wxHTML() : "") + `</div>
-        <button class="runhome" id="runhome" type="button" aria-label="처음 화면으로">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.6 10.4 12 3.6l8.4 6.8"/><path d="M5.8 12v7.4a1 1 0 0 0 1 1h10.4a1 1 0 0 0 1-1V12"/><path d="M10 20.4v-5.2h4v5.2"/></svg>
-        </button>
       </div>
     </div>`;
     if (!showWx) return;
@@ -1531,13 +1536,6 @@ $("#crumbs").addEventListener("click", e => {
   render();
 });
 $("#screen").addEventListener("click", e => {
-  /* 큰 원에 붙은 집 — 처음 화면으로 돌아간다.
-     제목(COFFEE RUN)을 눌러도 같은 일이 일어나지만, 목록을 보다가 손이 닿는 자리는 여기다.
-     원 밖(runring)에 두어 원을 누른 것으로 새지 않게 했다. */
-  if (e.target.closest("#runhome")){
-    qReset.click();
-    return;
-  }
   if (e.target.closest("#runbig")){
     pushHist();
     /* SHOP 은 원이 아니라 타일이고, GEAR·GAS STATION·RECENT 는 칩을 누른 순간 이미
