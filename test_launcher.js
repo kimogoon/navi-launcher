@@ -65,8 +65,11 @@ window.__run = function () {
   const D = DATA;
   const cafes = D.filter(r => r.k === "c"), deal = D.filter(r => r.k === "d");
   ok("데이터 로드", D.length > 1500, `${D.length}건`);
-  ok("카페 213곳", cafes.length === 213, `${cafes.length}`);
+  ok("카페 207곳", cafes.length === 207, `${cafes.length}`);
   ok("만화카페는 목록에 없음", !cafes.some(r => /만화/.test(r.name) || /만화/.test(r.cat || "")));
+  /* 상호 없이 주소만 저장된 핀·카페 아닌 업종(숙박 등)은 걷어냈다 — 2026-08-18 6곳 삭제 */
+  ok("이름 없는 핀 없음", !cafes.some(r => /^(서울|부산|대구|인천|광주|대전|울산|세종|경기|강원|충북|충남|전북|전남|경북|경남|제주)[가-힣]* .*(로|길|동|리)\s*[\d-]/.test(r.name)));
+  ok("행운펜션(숙박업) 없음", !cafes.some(r => r.name === "행운펜션"));
   const gear = D.filter(r => r.k === "s");
   ok("용품점 300곳", gear.length === 300, `${gear.length}`);
   ok("RS타이치 취급점 22곳", gear.filter(r => r.taichi).length === 22,
@@ -651,6 +654,12 @@ window.__run = function () {
     ok("긴 글은 창 안에서 스크롤", getComputedStyle(gcard).overflowY === "auto");
     ok("열려도 페이지는 안 밀린다",
        document.documentElement.scrollHeight - document.documentElement.clientHeight <= 0);
+    /* 공지는 좁은 화면에서 두 줄로 접혀 잘릴 일이 없지만, 그래도 안 잘리는 자리에
+       한 번 더 넣어 둔다 — 사용법 창은 폭에 상관없이 줄바꿈이 자유롭다 */
+    const gv = gcard.querySelector(".guide-version");
+    ok("사용법 창에도 버전·문의 메일", !!gv && txt(gv).includes("v" + APP_VERSION) && txt(gv).includes(CONTACT_EMAIL),
+       txt(gv));
+    ok("문의 메일은 mailto 링크", gv?.querySelector("a")?.getAttribute("href") === `mailto:${CONTACT_EMAIL}`);
     /* 장갑 낀 손을 위해 아무 데나 눌러도 닫힌다 — 카드 안이든 밖이든 */
     gcard.click();
     ok("글 위를 눌러도 닫힌다", gd.hidden);
@@ -663,11 +672,16 @@ window.__run = function () {
   } else {
     ["처음엔 닫혀 있다","공지를 누르면 열린다","사용법 내용이 있다","큰 원 설명이 있다",
      "창이 화면 안에 있다","긴 글은 창 안에서 스크롤","열려도 페이지는 안 밀린다",
+     "사용법 창에도 버전·문의 메일","문의 메일은 mailto 링크",
      "글 위를 눌러도 닫힌다","바깥을 눌러도 닫힌다","ESC 로도 닫힌다"].forEach(n => ok(n, false));
   }
+  /* 공지는 다시 짧은 한 줄이다 — 버전·문의 메일은 사용법 창 안에만 있다 */
   ok("공지 글이 한 줄에 들어간다",
      $("#noticeBtn").scrollWidth <= $("#noticeBtn").clientWidth + 1,
      `${$("#noticeBtn").scrollWidth}/${$("#noticeBtn").clientWidth}`);
+  ok("공지는 테스트기간 안내만", txt($("#noticeBtn")).includes("89라이더스 테스트 기간입니다"));
+  ok("버전·메일은 공지에 없다",
+     !txt($("#noticeBtn")).includes(CONTACT_EMAIL), txt($("#noticeBtn")));
 
   // ── 18. 용품점 ───────────────────────────────────────
   $("h1 #qReset").click();
