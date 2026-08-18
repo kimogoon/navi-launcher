@@ -104,6 +104,36 @@ h1 small{display:block;font:600 12px/1.4 var(--sans);letter-spacing:.02em;
 .notice i{flex:none;width:5px;height:5px;border-radius:50%;background:var(--red);
   animation:breathe 2.4s ease-in-out infinite}
 @keyframes breathe{0%,100%{opacity:.28;transform:scale(.8)}50%{opacity:1;transform:scale(1.15)}}
+/* 공지는 누를 수 있다 — 눌러도 되는 자리라는 걸 '사용법' 꼬리표로 알린다 */
+.notice{width:100%;border:0;background:transparent;text-align:left;cursor:pointer;padding:0}
+.notice span{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.notice em{flex:none;font:800 10px/1 var(--sans);font-style:normal;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--fg3);border:1px solid var(--line);
+  border-radius:999px;padding:4px 8px}
+.notice:active em{background:var(--raised);color:var(--fg2)}
+
+/* 사용법 — 화면을 덮고, 아무 데나 한 번 더 누르면 닫힌다.
+   닫기 단추를 따로 두지 않는다. 장갑 낀 손으로 작은 X 를 겨누는 것보다
+   아무 데나 누르는 편이 빠르고, 잘못 눌러 다른 곳으로 튈 일도 없다. */
+.guide{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;
+  padding:calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));
+  background:rgba(0,0,0,.62);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+  animation:guidein .16s ease-out}
+.guide[hidden]{display:none}
+@keyframes guidein{from{opacity:0}to{opacity:1}}
+.guide-card{width:100%;max-width:460px;max-height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  background:var(--surface);border:1px solid var(--line);border-radius:18px;
+  padding:22px 20px 16px;box-shadow:0 30px 70px -30px rgba(0,0,0,.9)}
+.guide-card h2{margin:0 0 16px;font:900 19px/1.2 var(--sans);font-style:italic;
+  letter-spacing:-.03em;color:var(--fg)}
+.guide-card dl{margin:0;display:flex;flex-direction:column;gap:13px}
+.guide-card dt{font:800 12px/1 var(--sans);letter-spacing:.02em;color:var(--red-fg);
+  margin-bottom:5px}
+.guide-card dd{margin:0;font:400 13.5px/1.62 var(--sans);color:var(--fg2);word-break:keep-all}
+.guide-card dd b{font-weight:800;color:var(--fg)}
+.guide-close{margin:18px 0 0;padding-top:13px;border-top:1px solid var(--line2);
+  font:600 11px/1 var(--sans);letter-spacing:.04em;text-align:center;color:var(--fg3)}
+@media (prefers-reduced-motion:reduce){.guide{animation:none}}
 @media (prefers-reduced-motion:reduce){.notice i{animation:none;opacity:.75}}
 .search-wrap{position:relative;margin-bottom:8px}
 .search-input{
@@ -486,7 +516,7 @@ button:focus-visible,a:focus-visible,.tile:focus-visible{outline:2px solid var(-
 <div class="wrap">
   <header class="head">
   <h1><button id="qReset" type="button" class="home-title">COFFEE RUN</button></h1>
-  <p class="notice"><b>Notice</b><i aria-hidden="true"></i>지금은 89라이더스 테스트기간입니다.</p>
+  <button class="notice" id="noticeBtn" type="button" aria-haspopup="dialog"><b>Notice</b><i aria-hidden="true"></i><span>지금은 89라이더스 테스트기간입니다.</span><em aria-hidden="true">사용법</em></button>
 
   <div class="search-wrap">
     <input id="searchInput" class="search-input" type="search"
@@ -521,6 +551,32 @@ button:focus-visible,a:focus-visible,.tile:focus-visible{outline:2px solid var(-
     <span class="brand-cut" aria-hidden="true"></span>
     <svg class="wordmark" viewBox="0 0 7550 732" role="img" aria-label="FURYCLASSIC"><g transform="translate(-2,716) scale(1,-1)" fill="currentColor"><path transform="translate(0,0)" d="M342 522 318 402H610L574 224H283L238 0H2L142 700H711L675 522Z"/><path transform="translate(650,0)" d="M51 241Q51 273 59 315L136 700H372L296 319Q290 291 290 268Q290 221 314.0 198.0Q338 175 384 175Q436 175 465.0 208.0Q494 241 510 319L586 700H818L739 305Q707 146 611.0 65.0Q515 -16 355 -16Q261 -16 192.5 15.5Q124 47 87.5 105.0Q51 163 51 241Z"/><path transform="translate(1440,0)" d="M558 204 675 0H430L331 176H273L238 0H2L142 700H456Q594 700 670.5 639.5Q747 579 747 470Q747 377 697.5 307.5Q648 238 558 204ZM420 518H341L308 354H405Q454 354 481.0 378.5Q508 403 508 447Q508 518 420 518Z"/><path transform="translate(2191,0)" d="M468 254 418 0H182L233 257L58 700H295L390 458L585 700H822Z"/><path transform="translate(2907,0)" d="M41 297Q41 419 97.5 514.0Q154 609 254.5 662.5Q355 716 483 716Q584 716 662.0 679.5Q740 643 778 576L608 443Q561 525 468 525Q413 525 370.0 498.0Q327 471 303.0 422.5Q279 374 279 312Q279 250 318.5 212.5Q358 175 423 175Q512 175 579 256L718 123Q657 48 579.5 16.0Q502 -16 400 -16Q293 -16 211.5 23.5Q130 63 85.5 134.0Q41 205 41 297Z"/><path transform="translate(3657,0)" d="M142 700H378L275 183H591L554 0H2Z"/><path transform="translate(4280,0)" d="M512 122H245L175 0H-74L372 700H604L770 0H535ZM479 292 445 471 342 292Z"/><path transform="translate(5092,0)" d="M-23 55 68 229Q181 164 304 164Q349 164 373.0 175.0Q397 186 397 205Q397 223 372.5 234.0Q348 245 295 258Q225 276 179.0 294.5Q133 313 98.5 351.5Q64 390 64 453Q64 532 106.5 591.5Q149 651 229.0 683.5Q309 716 418 716Q496 716 563.5 700.5Q631 685 680 656L595 484Q554 510 504.5 523.0Q455 536 403 536Q354 536 327.0 522.0Q300 508 300 489Q300 470 324.5 459.0Q349 448 405 435Q473 419 519.5 401.0Q566 383 600.0 345.0Q634 307 634 245Q634 167 591.0 108.0Q548 49 468.0 16.5Q388 -16 280 -16Q189 -16 109.0 3.5Q29 23 -23 55Z"/><path transform="translate(5755,0)" d="M-23 55 68 229Q181 164 304 164Q349 164 373.0 175.0Q397 186 397 205Q397 223 372.5 234.0Q348 245 295 258Q225 276 179.0 294.5Q133 313 98.5 351.5Q64 390 64 453Q64 532 106.5 591.5Q149 651 229.0 683.5Q309 716 418 716Q496 716 563.5 700.5Q631 685 680 656L595 484Q554 510 504.5 523.0Q455 536 403 536Q354 536 327.0 522.0Q300 508 300 489Q300 470 324.5 459.0Q349 448 405 435Q473 419 519.5 401.0Q566 383 600.0 345.0Q634 307 634 245Q634 167 591.0 108.0Q548 49 468.0 16.5Q388 -16 280 -16Q189 -16 109.0 3.5Q29 23 -23 55Z"/><path transform="translate(6418,0)" d="M142 700H378L238 0H2Z"/><path transform="translate(6774,0)" d="M41 297Q41 419 97.5 514.0Q154 609 254.5 662.5Q355 716 483 716Q584 716 662.0 679.5Q740 643 778 576L608 443Q561 525 468 525Q413 525 370.0 498.0Q327 471 303.0 422.5Q279 374 279 312Q279 250 318.5 212.5Q358 175 423 175Q512 175 579 256L718 123Q657 48 579.5 16.0Q502 -16 400 -16Q293 -16 211.5 23.5Q130 63 85.5 134.0Q41 205 41 297Z"/></g></svg>
     <p class="slogan">Where You Stand Becomes The Studio</p>
+  </div>
+</div>
+
+<!-- 사용법 — 공지를 누르면 열리고, 화면을 한 번 더 누르면 닫힌다.
+     처음 쓰는 사람이 큰 원을 무엇에 쓰는 건지 몰라 헤매지 않게. -->
+<div class="guide" id="guide" role="dialog" aria-modal="true" aria-label="사용법" hidden>
+  <div class="guide-card">
+    <h2>COFFEE RUN 사용법</h2>
+    <dl>
+      <dt>가운데 큰 원</dt>
+      <dd>좌우로 넘겨 지역이나 브랜드를 고르고, 원을 누르면 그 목록이 열립니다.
+          COFFEE는 담아 둔 곳, GAS STATION은 내 주변이 바로 켜집니다.</dd>
+      <dt>원 오른쪽 아래 집</dt>
+      <dd>어디까지 들어갔든 첫 화면으로 한 번에 돌아옵니다.</dd>
+      <dt>위쪽 네 칸</dt>
+      <dd><b>내 주변</b> 지금 보는 것 중 가까운 순 · <b>집</b> 등록해 둔 집으로 안내 ·
+          <b>PIN</b> 별표로 담아 둔 곳 · <b>뒤로</b> 한 단계 되돌리기</dd>
+      <dt>카드를 누르면</dt>
+      <dd>내비 앱을 골라 바로 안내가 시작됩니다.
+          카카오내비만 목적지를 복사해 주니, 열린 검색창에 붙여넣으세요.</dd>
+      <dt>그밖에</dt>
+      <dd>COFFEE 화면 원 안에 지금 날씨가 뜨고, 비·눈이면 원이 빨갛게 바뀝니다.
+          주유소는 일반·고급 시세가 카드에 적힙니다.
+          화면은 위아래로 움직이지 않습니다 — 목록은 좌우로 넘겨 보세요.</dd>
+    </dl>
+    <p class="guide-close">화면을 한 번 더 누르면 닫힙니다</p>
   </div>
 </div>
 <script>
@@ -1708,6 +1764,17 @@ qReset.addEventListener("click", () => {
    없으면 카드가 헤더에 붙어 잘린 것처럼 보인다. */
 /* 담아 둔 곳은 첫 화면(랜딩)의 ★ PIN 칸에 함께 나온다 —
    따로 PIN 모드로 시작하지 않는다. 첫 화면은 큰 RUN 원과 날씨가 주인공이다. */
+
+/* 사용법 창 — 공지를 누르면 열리고, 화면 아무 데나 한 번 더 누르면 닫힌다.
+   click 으로 닫는다. touchstart 로 하면 글을 읽으려 쓸어 내리다가 닫혀 버린다 —
+   쓸어 내리는 동작에서는 click 이 나지 않으므로 긴 글도 읽을 수 있다. */
+const guide = $("#guide");
+const openGuide = () => { guide.hidden = false; guide.scrollTop = 0;
+  const c = guide.querySelector(".guide-card"); if (c) c.scrollTop = 0; };
+const closeGuide = () => { guide.hidden = true; };
+$("#noticeBtn").addEventListener("click", openGuide);
+guide.addEventListener("click", closeGuide);
+addEventListener("keydown", e => { if (e.key === "Escape" && !guide.hidden) closeGuide(); });
 
 const head = document.querySelector(".head");
 const onScroll = () => head.classList.toggle("stuck", window.scrollY > 4);
